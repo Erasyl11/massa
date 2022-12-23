@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     binders::{ReadBinder, WriteBinder},
-    handshake_worker::HandshakeWorker,
+    handshake_worker::{start_handshake_manager, HandshakeWorker},
     messages::{Message, MessageDeserializer},
     network_event::EventSender,
 };
@@ -68,6 +68,9 @@ pub struct NetworkWorker {
     pub(crate) event: EventSender,
     /// Tokio runtime.
     runtime: Runtime,
+    connections_rx: Receiver<(ConnectionId, HandshakeReturnType)>,
+    handshake_tx: Sender<(ConnectionId, HandshakeWorker)>,
+    handshake_join_handle: JoinHandle<()>,
 }
 
 pub struct NetworkWorkerChannels {
@@ -103,6 +106,13 @@ impl NetworkWorker {
     ) -> NetworkWorker {
         let self_node_id = NodeId(keypair.get_public_key());
 
+        let runtime = Runtime::new().expect("Failed to initialize networking runtime.");
+
+        // TODO: config size.
+        let (conn_tx, connections_rx) = bounded::<(ConnectionId, HandshakeReturnType)>(1);
+        let (handshake_tx, handshake_join_handle) =
+            start_handshake_manager(conn_tx, runtime.handle().clone());
+
         let (node_event_tx, node_event_rx) = bounded::<NodeEvent>(cfg.node_event_channel_size);
         let max_wait_event = cfg.max_send_wait_network_event.to_duration();
         NetworkWorker {
@@ -123,7 +133,10 @@ impl NetworkWorker {
             node_worker_handles: FuturesUnordered::new(),
             active_connections: HashMap::new(),
             version,
-            runtime: Runtime::new().expect("Failed to initialize networking runtime."),
+            runtime,
+            connections_rx,
+            handshake_tx,
+            handshake_join_handle,
         }
     }
 
@@ -193,6 +206,19 @@ impl NetworkWorker {
                     }
                 },
 
+                // Handle finished handshakes.
+                recv(self.connections_rx) -> msg => {
+                    match msg {
+                        Err(_) => {
+                            // Handshake manager failed.
+                            break
+                        },
+                        Ok((conn_id, outcome)) => {
+                            self.on_handshake_finished(conn_id, outcome)?;
+                        }
+                    }
+                },
+
                 // Out-connections
                 // `out_connection_rx` is always Some(rx) here.
                 recv(out_connection_rx.as_ref().expect("No out_connection_rx.")) -> conn => {
@@ -214,9 +240,14 @@ impl NetworkWorker {
             }
         }
 
+        // Abort the out connection task.
         if let Some(handle) = out_connection_handle {
             handle.abort();
         }
+
+        // Join on the handshake manager thread.
+        self.handshake_join_handle.join();
+
         Ok(())
     }
 
@@ -226,7 +257,7 @@ impl NetworkWorker {
     /// # Arguments
     /// * `new_connection_id`: connection id of the connection that should be established here.
     /// * `outcome`: result returned by a handshake.
-    async fn on_handshake_finished(
+    fn on_handshake_finished(
         &mut self,
         new_connection_id: ConnectionId,
         outcome: HandshakeReturnType,
@@ -629,6 +660,26 @@ impl NetworkWorker {
             return Err(NetworkError::HandshakeError(
                 HandshakeErrorType::HandshakeIdAlreadyExist(format!("{}", connection_id)),
             ));
+        }
+        let worker = HandshakeWorker::new(
+            reader,
+            writer,
+            self.self_node_id,
+            self.keypair.clone(),
+            self.cfg.connect_timeout,
+            self.version,
+            self.cfg.max_bytes_read,
+            self.cfg.max_bytes_write,
+        );
+        if let Err(_) = self.handshake_tx.send((connection_id.clone(), worker)) {
+            return Err(NetworkError::HandshakeError(
+                HandshakeErrorType::ManagementFailed,
+            ));
+        } else {
+            debug!("starting handshake with connection_id={}", connection_id);
+            massa_trace!("network_worker.new_connection", {
+                "connection_id": connection_id
+            });
         }
         Ok(())
     }

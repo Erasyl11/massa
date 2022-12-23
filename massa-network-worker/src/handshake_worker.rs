@@ -40,13 +40,30 @@ use tracing::debug;
 /// Type alias for more readability
 pub type HandshakeReturnType = Result<(NodeId, ReadBinder, WriteBinder), NetworkError>;
 
+/// Start a thread, that will be responsible for running handshake workers,
+/// and sending the results back to the network worker.
 pub fn start_handshake_manager(
     connection_sender: Sender<(ConnectionId, HandshakeReturnType)>,
     runtime_handle: Handle,
-) -> (Sender<HandshakeWorker>, JoinHandle<()>) {
+) -> (Sender<(ConnectionId, HandshakeWorker)>, JoinHandle<()>) {
     // TODO: config size.
-    let (worker_tx, worker_rx) = bounded::<HandshakeWorker>(1);
-    let join_handle = thread::spawn(move || {});
+    let (worker_tx, worker_rx) = bounded::<(ConnectionId, HandshakeWorker)>(1);
+    let join_handle = thread::spawn(move || {
+        while let Ok((connection_id, new_handshake_worker)) = worker_rx.recv() {
+            let connection_sender = connection_sender.clone();
+            runtime_handle.spawn(async move {
+                let result = new_handshake_worker.run().await;
+                Handle::current()
+                    .spawn_blocking(move || {
+                        connection_sender
+                            .send((connection_id, result))
+                            .expect("Failed to send new connection message to network worker.");
+                    })
+                    .await
+                    .expect("Failed to run task to send new connection message to network worker.");
+            });
+        }
+    });
     (worker_tx, join_handle)
 }
 
@@ -83,57 +100,43 @@ impl HandshakeWorker {
     /// * `connection_id`: Node we are trying to connect for debugging
     /// * `version`: Node version used in handshake initialization (check peers compatibility)
     #[allow(clippy::too_many_arguments)]
-    pub fn spawn(
+    pub fn new(
         socket_reader: ReadHalf,
         socket_writer: WriteHalf,
         self_node_id: NodeId,
         keypair: KeyPair,
         timeout_duration: MassaTime,
         version: Version,
-        connection_id: ConnectionId,
         max_bytes_read: f64,
         max_bytes_write: f64,
-    ) -> AsyncJoinHandle<(ConnectionId, HandshakeReturnType)> {
-        debug!("starting handshake with connection_id={}", connection_id);
-        massa_trace!("network_worker.new_connection", {
-            "connection_id": connection_id
-        });
-
-        let connection_id_copy = connection_id;
-        tokio::spawn(async move {
-            (
-                connection_id_copy,
-                HandshakeWorker {
-                    reader: ReadBinder::new(
-                        socket_reader,
-                        max_bytes_read,
-                        MAX_MESSAGE_SIZE,
-                        MessageDeserializer::new(
-                            THREAD_COUNT,
-                            ENDORSEMENT_COUNT,
-                            MAX_ADVERTISE_LENGTH,
-                            MAX_ASK_BLOCKS_PER_MESSAGE,
-                            MAX_OPERATIONS_PER_BLOCK,
-                            MAX_OPERATIONS_PER_MESSAGE,
-                            MAX_ENDORSEMENTS_PER_MESSAGE,
-                            MAX_DATASTORE_VALUE_LENGTH,
-                            MAX_FUNCTION_NAME_LENGTH,
-                            MAX_PARAMETERS_SIZE,
-                            MAX_OPERATION_DATASTORE_ENTRY_COUNT,
-                            MAX_OPERATION_DATASTORE_KEY_LENGTH,
-                            MAX_OPERATION_DATASTORE_VALUE_LENGTH,
-                        ),
-                    ),
-                    writer: WriteBinder::new(socket_writer, max_bytes_write, MAX_MESSAGE_SIZE),
-                    self_node_id,
-                    keypair,
-                    timeout_duration,
-                    version,
-                }
-                .run()
-                .await,
-            )
-        })
+    ) -> Self {
+        HandshakeWorker {
+            reader: ReadBinder::new(
+                socket_reader,
+                max_bytes_read,
+                MAX_MESSAGE_SIZE,
+                MessageDeserializer::new(
+                    THREAD_COUNT,
+                    ENDORSEMENT_COUNT,
+                    MAX_ADVERTISE_LENGTH,
+                    MAX_ASK_BLOCKS_PER_MESSAGE,
+                    MAX_OPERATIONS_PER_BLOCK,
+                    MAX_OPERATIONS_PER_MESSAGE,
+                    MAX_ENDORSEMENTS_PER_MESSAGE,
+                    MAX_DATASTORE_VALUE_LENGTH,
+                    MAX_FUNCTION_NAME_LENGTH,
+                    MAX_PARAMETERS_SIZE,
+                    MAX_OPERATION_DATASTORE_ENTRY_COUNT,
+                    MAX_OPERATION_DATASTORE_KEY_LENGTH,
+                    MAX_OPERATION_DATASTORE_VALUE_LENGTH,
+                ),
+            ),
+            writer: WriteBinder::new(socket_writer, max_bytes_write, MAX_MESSAGE_SIZE),
+            self_node_id,
+            keypair,
+            timeout_duration,
+            version,
+        }
     }
 
     /// Manages one on going handshake.
