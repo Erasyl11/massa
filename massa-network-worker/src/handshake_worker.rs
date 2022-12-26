@@ -51,16 +51,11 @@ pub fn start_handshake_manager(
     let join_handle = thread::spawn(move || {
         while let Ok((connection_id, new_handshake_worker)) = worker_rx.recv() {
             let connection_sender = connection_sender.clone();
-            runtime_handle.spawn(async move {
+            runtime_handle.block_on(async move {
                 let result = new_handshake_worker.run().await;
-                Handle::current()
-                    .spawn_blocking(move || {
-                        connection_sender
-                            .send((connection_id, result))
-                            .expect("Failed to send new connection message to network worker.");
-                    })
-                    .await
-                    .expect("Failed to run task to send new connection message to network worker.");
+                connection_sender
+                    .send((connection_id, result))
+                    .expect("Failed to send new connection message to network worker.");
             });
         }
     });
