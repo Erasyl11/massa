@@ -56,10 +56,7 @@ pub struct NetworkWorker {
     /// Receiving channel for node events.
     node_event_rx: Receiver<NodeEvent>,
     /// Ids of active nodes mapped to Connection id, node command sender and handle on the associated node worker.
-    pub(crate) active_nodes: HashMap<NodeId, (ConnectionId, Sender<NodeCommand>)>,
-    /// Node worker handles
-    node_worker_handles:
-        FuturesUnordered<JoinHandle<(NodeId, Result<ConnectionClosureReason, NetworkError>)>>,
+    pub(crate) active_nodes: HashMap<NodeId, (ConnectionId, Sender<NodeCommand>, JoinHandle<()>)>,
     /// Map of connection to ip, `is_outgoing`.
     pub(crate) active_connections: HashMap<ConnectionId, (IpAddr, bool)>,
     /// Node version
@@ -71,6 +68,9 @@ pub struct NetworkWorker {
     connections_rx: Receiver<(ConnectionId, HandshakeReturnType)>,
     handshake_tx: Sender<(ConnectionId, HandshakeWorker)>,
     handshake_join_handle: JoinHandle<()>,
+
+    node_result_rx: Receiver<(NodeId, Result<ConnectionClosureReason, NetworkError>)>,
+    node_result_tx: Sender<(NodeId, Result<ConnectionClosureReason, NetworkError>)>,
 }
 
 pub struct NetworkWorkerChannels {
@@ -113,6 +113,10 @@ impl NetworkWorker {
         let (handshake_tx, handshake_join_handle) =
             start_handshake_manager(conn_tx, runtime.handle().clone());
 
+        // TODO: config size.
+        let (node_result_tx, node_result_rx) =
+            bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
+
         let (node_event_tx, node_event_rx) = bounded::<NodeEvent>(cfg.node_event_channel_size);
         let max_wait_event = cfg.max_send_wait_network_event.to_duration();
         NetworkWorker {
@@ -130,13 +134,14 @@ impl NetworkWorker {
             handshake_peer_list_futures: FuturesUnordered::new(),
             node_event_rx,
             active_nodes: HashMap::new(),
-            node_worker_handles: FuturesUnordered::new(),
             active_connections: HashMap::new(),
             version,
             runtime,
             connections_rx,
             handshake_tx,
             handshake_join_handle,
+            node_result_rx,
+            node_result_tx,
         }
     }
 
@@ -199,6 +204,49 @@ impl NetworkWorker {
                     }
                 },
 
+                // event received from a node
+                recv(self.node_event_rx) -> evt => {
+                    self.on_node_event(
+                        evt.or(Err(NetworkError::ChannelError("node event rx failed".into())))?
+                    );
+                }
+
+                // Active node run result
+                recv(self.node_result_rx) -> msg => {
+                    // Should never panic, since the network worker keeps a sender around.
+                    let (node_id, res) = msg.expect("Unexpected failure of node worker.");
+
+                    let reason = match res {
+                        Ok(r) => {
+                            massa_trace!("network.network_worker.run_loop.node_worker_handles.normal", {
+                                "node_id": node_id,
+                                "reason": r,
+                            });
+                            r
+                        },
+                        Err(err) => {
+                            massa_trace!("network.network_worker.run_loop.node_worker_handles.err", {
+                                "node_id": node_id,
+                                "err": format!("{}", err)
+                            });
+                            ConnectionClosureReason::Failed
+                        }
+                    };
+
+                    // Note: if the send is dropped, and we later receive a command related to an unknown node,
+                    // we will retry a send for this event for that unknown node,
+                    // ensuring protocol eventually notes the closure.
+                    let _ = self
+                        .event.send(NetworkEvent::ConnectionClosed(node_id));
+                    if let Some((connection_id, _, join_handle)) = self
+                        .active_nodes
+                        .remove(&node_id) {
+                        massa_trace!("protocol channel closed", {"node_id": node_id});
+                        self.connection_closed(connection_id, reason)?;
+                        join_handle.join();
+                    }
+                }
+
                 // incoming command
                 recv(self.controller_command_rx) -> cmd => {
                     if let Ok(cmd) = cmd {
@@ -246,7 +294,22 @@ impl NetworkWorker {
         }
 
         // Join on the handshake manager thread.
-        self.handshake_join_handle.join();
+        self.handshake_join_handle
+            .join()
+            .expect("Failed to join on the handshake manager thread at shutdown.");
+
+        // Shutdown all the node workers.
+        for (_, node_command_tx, handle) in self.active_nodes.into_values() {
+            node_command_tx
+                .send(NodeCommand::Close(ConnectionClosureReason::Normal))
+                .expect("Failed to send close command to node worker.");
+            handle
+                .join()
+                .expect("Failed to join on a node worker thread at shutdown.");
+        }
+
+        // Will block until all tasks are finished.
+        drop(self.runtime);
 
         Ok(())
     }
@@ -327,6 +390,7 @@ impl NetworkWorker {
                         let cfg_copy = self.cfg.clone();
                         let node_worker_command_tx = node_command_tx.clone();
                         let runtime_handle = self.runtime.handle().clone();
+                        let node_result_tx = self.node_result_tx.clone();
                         let node_fn_handle = thread::spawn(move || {
                             let res = NodeWorker::new(
                                 cfg_copy,
@@ -339,9 +403,11 @@ impl NetworkWorker {
                                 runtime_handle,
                             )
                             .run_loop();
-                            (new_node_id, res)
+                            node_result_tx
+                                .send((new_node_id, res))
+                                .expect("Failed to send node run result back to network worker. ");
                         });
-                        entry.insert((new_connection_id, node_command_tx.clone()));
+                        entry.insert((new_connection_id, node_command_tx.clone(), node_fn_handle));
 
                         let res = self.event.send(NetworkEvent::NewConnection(new_node_id));
 

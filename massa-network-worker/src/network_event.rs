@@ -163,7 +163,7 @@ pub mod event_impl {
         debug!("node_id={} asked us for peer list", from);
         massa_trace!("node_asked_peer_list", { "node_id": from });
         let peer_list = worker.peer_info_db.get_advertisable_peer_ips();
-        if let Some((_, node_command_tx)) = worker.active_nodes.get(&from) {
+        if let Some((_, node_command_tx, _)) = worker.active_nodes.get(&from) {
             if node_command_tx
                 .send(NodeCommand::SendPeerList(peer_list))
                 .is_err()

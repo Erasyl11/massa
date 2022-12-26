@@ -12,6 +12,7 @@ use massa_network_exports::{
     ConnectionClosureReason, NetworkConfig, NetworkError, NodeCommand, NodeEvent, NodeEventType,
 };
 use massa_time::MassaTime;
+use std::thread::{self, JoinHandle};
 use tokio::runtime::Handle;
 use tokio::{sync::mpsc, task, time::timeout};
 use tracing::{debug, trace, warn};

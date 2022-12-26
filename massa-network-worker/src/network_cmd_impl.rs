@@ -51,7 +51,7 @@ fn ban_connection_ids(worker: &mut NetworkWorker, ids: HashSet<ConnectionId>) {
         // remove the connectionId entry in running_handshakes
         worker.running_handshakes.remove(ban_conn_id);
     }
-    for (conn_id, node_command_tx) in worker.active_nodes.values() {
+    for (conn_id, node_command_tx, _) in worker.active_nodes.values() {
         if ids.contains(conn_id) {};
     }
 }
@@ -110,7 +110,7 @@ fn get_peers(worker: &mut NetworkWorker, response_tx: Sender<Peers>) {
                             worker
                                 .active_nodes
                                 .iter()
-                                .filter_map(|(node_id, (conn_id, _))| {
+                                .filter_map(|(node_id, (conn_id, _, _))| {
                                     if out_conn_id == conn_id {
                                         Some(node_id)
                                     } else {
@@ -354,7 +354,7 @@ fn get_connection_ids(
     node: &NodeId,
 ) -> Result<HashSet<ConnectionId>, NetworkError> {
     let mut ids: HashSet<ConnectionId> = HashSet::new();
-    if let Some((orig_conn_id, _)) = worker.active_nodes.get(node) {
+    if let Some((orig_conn_id, _, _)) = worker.active_nodes.get(node) {
         if let Some((orig_ip, _)) = worker.active_connections.get(orig_conn_id) {
             worker.peer_info_db.peer_banned(orig_ip)?;
             for (target_conn_id, (target_ip, _)) in worker.active_connections.iter() {
@@ -369,7 +369,7 @@ fn get_connection_ids(
 }
 
 fn get_ip(worker: &mut NetworkWorker, node: &NodeId) -> Option<IpAddr> {
-    if let Some((orig_conn_id, _)) = worker.active_nodes.get(node) {
+    if let Some((orig_conn_id, _, _)) = worker.active_nodes.get(node) {
         if let Some((orig_ip, _)) = worker.active_connections.get(orig_conn_id) {
             for (_, (target_ip, _)) in worker.active_connections.iter() {
                 if target_ip == orig_ip {
