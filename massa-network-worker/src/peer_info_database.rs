@@ -354,7 +354,7 @@ impl PeerInfoDatabase {
         Ok(())
     }
 
-    pub async fn whitelist(&mut self, ips: Vec<IpAddr>) -> Result<(), NetworkError> {
+    pub fn whitelist(&mut self, ips: Vec<IpAddr>) -> Result<(), NetworkError> {
         for ip in ips.into_iter() {
             let ip = ip.to_canonical();
             let old_pt = if let Some(peer) = self.peers.get_mut(&ip) {
@@ -391,7 +391,7 @@ impl PeerInfoDatabase {
         self.update()
     }
 
-    pub async fn remove_from_whitelist(&mut self, ips: Vec<IpAddr>) -> Result<(), NetworkError> {
+    pub fn remove_from_whitelist(&mut self, ips: Vec<IpAddr>) -> Result<(), NetworkError> {
         for ip in ips.into_iter() {
             let ip = ip.to_canonical();
             let old_pt = if let Some(peer) = self.peers.get_mut(&ip) {

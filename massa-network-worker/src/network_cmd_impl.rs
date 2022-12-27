@@ -52,7 +52,16 @@ fn ban_connection_ids(worker: &mut NetworkWorker, ids: HashSet<ConnectionId>) {
         worker.running_handshakes.remove(ban_conn_id);
     }
     for (conn_id, node_command_tx, _) in worker.active_nodes.values() {
-        if ids.contains(conn_id) {};
+        if ids.contains(conn_id) {
+            let res = node_command_tx.send(NodeCommand::Close(ConnectionClosureReason::Banned));
+            if res.is_err() {
+                massa_trace!(
+                    "network.network_worker.manage_network_command", {"err": NetworkError::ChannelError(
+                        "close node command send failed".into(),
+                    ).to_string()}
+                );
+            }
+        };
     }
 }
 
@@ -74,6 +83,7 @@ fn node_ban_by_ips(worker: &mut NetworkWorker, ips: Vec<IpAddr>) -> Result<(), N
         })
         .copied()
         .collect::<HashSet<_>>();
+    ban_connection_ids(worker, connexion_ids);
     Ok(())
 }
 
@@ -87,7 +97,7 @@ fn node_ban_by_ids(worker: &mut NetworkWorker, ids: Vec<NodeId>) -> Result<(), N
         .filter(|res| res.is_ok())
         .flat_map(|res| res.unwrap())
         .collect::<HashSet<_>>();
-
+    ban_connection_ids(worker, connection_ids_to_ban);
     Ok(())
 }
 
@@ -146,7 +156,7 @@ pub fn on_node_ban_by_ips_cmd(
         "network_worker.manage_network_command receive NetworkCommand::NodeBanByIps",
         { "ips": ips }
     );
-    Ok(())
+    node_ban_by_ips(worker, ips)
 }
 
 pub fn on_node_ban_by_ids_cmd(
@@ -157,7 +167,7 @@ pub fn on_node_ban_by_ids_cmd(
         "network_worker.manage_network_command receive NetworkCommand::NodeBanByIds",
         { "ids": ids }
     );
-    Ok(())
+    node_ban_by_ids(worker, ids)
 }
 
 pub fn on_send_block_header_cmd(
@@ -166,7 +176,11 @@ pub fn on_send_block_header_cmd(
     header: WrappedHeader,
 ) -> Result<(), NetworkError> {
     massa_trace!("network_worker.manage_network_command send NodeCommand::SendBlockHeader", {"block_id": header.id, "node": node});
-
+    worker.event.forward(
+        node,
+        worker.active_nodes.get(&node),
+        NodeCommand::SendBlockHeader(header),
+    );
     Ok(())
 }
 
@@ -178,6 +192,11 @@ pub fn on_ask_for_block_cmd(
         massa_trace!(
             "network_worker.manage_network_command receive NetworkCommand::AskForBlocks",
             { "hashlist": hash_list, "node": node }
+        );
+        worker.event.forward(
+            node,
+            worker.active_nodes.get(&node),
+            NodeCommand::AskForBlocks(hash_list),
         );
     }
 }
@@ -191,6 +210,11 @@ pub fn on_send_block_info_cmd(
         "network_worker.manage_network_command receive NetworkCommand::SendBlockInfo",
         { "node": node }
     );
+    worker.event.forward(
+        node,
+        worker.active_nodes.get(&node),
+        NodeCommand::ReplyForBlocks(info),
+    );
 
     Ok(())
 }
@@ -200,6 +224,7 @@ pub fn on_get_peers_cmd(worker: &mut NetworkWorker, response_tx: Sender<Peers>) 
         "network_worker.manage_network_command receive NetworkCommand::GetPeers",
         {}
     );
+    get_peers(worker, response_tx);
 }
 
 pub fn on_get_bootstrap_peers_cmd(worker: &mut NetworkWorker, response_tx: Sender<BootstrapPeers>) {
@@ -221,6 +246,11 @@ pub fn on_send_endorsements_cmd(
     massa_trace!(
         "network_worker.manage_network_command receive NetworkCommand::SendEndorsements",
         { "node": node, "endorsements": endorsements }
+    );
+    worker.event.forward(
+        node,
+        worker.active_nodes.get(&node),
+        NodeCommand::SendEndorsements(endorsements),
     );
 }
 
@@ -254,27 +284,25 @@ pub fn on_node_unban_by_ids_cmd(
         .iter()
         .flat_map(|id| get_ip(worker, id))
         .collect::<Vec<_>>();
-    worker.peer_info_db.unban(ips_to_unban);
-    Ok(())
+    worker.peer_info_db.unban(ips_to_unban)
 }
 
 pub fn on_node_unban_by_ips_cmd(
     worker: &mut NetworkWorker,
     ips: Vec<IpAddr>,
 ) -> Result<(), NetworkError> {
-    worker.peer_info_db.unban(ips);
-    Ok(())
+    worker.peer_info_db.unban(ips)
 }
 
 pub fn on_whitelist_cmd(worker: &mut NetworkWorker, ips: Vec<IpAddr>) -> Result<(), NetworkError> {
-    Ok(())
+    worker.peer_info_db.whitelist(ips)
 }
 
 pub fn on_remove_from_whitelist_cmd(
     worker: &mut NetworkWorker,
     ips: Vec<IpAddr>,
 ) -> Result<(), NetworkError> {
-    Ok(())
+    worker.peer_info_db.remove_from_whitelist(ips)
 }
 
 pub fn on_get_stats_cmd(worker: &mut NetworkWorker, response_tx: Sender<NetworkStats>) {
@@ -311,6 +339,11 @@ pub fn on_send_operations_cmd(
         "network_worker.manage_network_command receive NetworkCommand::SendOperations",
         { "node": to_node, "operations": operations }
     );
+    worker.event.forward(
+        to_node,
+        worker.active_nodes.get(&to_node),
+        NodeCommand::SendOperations(operations),
+    );
 }
 
 /// On the command `[massa_network_exports::NetworkCommand::SendOperationAnnouncements]` is called,
@@ -323,6 +356,11 @@ pub fn on_send_operation_batches_cmd(
     massa_trace!(
         "network_worker.manage_network_command receive NetworkCommand::SendOperationAnnouncements",
         { "batch": batch }
+    );
+    worker.event.forward(
+        to_node,
+        worker.active_nodes.get(&to_node),
+        NodeCommand::SendOperationAnnouncements(batch),
     );
 }
 
@@ -346,6 +384,11 @@ pub fn on_ask_for_operations_cmd(
     massa_trace!(
         "network_worker.manage_network_command receive NetworkCommand::SendOperationAnnouncements",
         { "wishlist": wishlist }
+    );
+    worker.event.forward(
+        to_node,
+        worker.active_nodes.get(&to_node),
+        NodeCommand::AskForOperations(wishlist),
     );
 }
 

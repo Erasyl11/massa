@@ -1,6 +1,7 @@
 use crossbeam_channel::{bounded, select, tick, Receiver, SendTimeoutError, Sender};
 use massa_models::node::NodeId;
 use massa_network_exports::{ConnectionId, NetworkError, NetworkEvent, NodeCommand, NodeEvent};
+use std::thread::JoinHandle;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tracing::debug;
@@ -50,10 +51,10 @@ impl EventSender {
     pub fn forward(
         &self,
         node_id: NodeId,
-        node: Option<&(ConnectionId, Sender<NodeCommand>)>,
+        node: Option<&(ConnectionId, Sender<NodeCommand>, JoinHandle<()>)>,
         message: NodeCommand,
     ) {
-        if let Some((_, node_command_tx)) = node {
+        if let Some((_, node_command_tx, _)) = node {
             if node_command_tx.send(message).is_err() {
                 debug!(
                     "{}",
