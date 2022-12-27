@@ -27,6 +27,7 @@ use std::{
 };
 use tokio::runtime::{Handle, Runtime};
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle as AsyncJoinHandle;
 use tracing::{debug, trace, warn};
 
 /// Real job is done by network worker
@@ -52,7 +53,7 @@ pub struct NetworkWorker {
     /// Running handshakes futures.
     handshake_futures: FuturesUnordered<JoinHandle<(ConnectionId, HandshakeReturnType)>>,
     /// Running handshakes that send a list of peers.
-    handshake_peer_list_futures: FuturesUnordered<JoinHandle<()>>,
+    handshake_peer_list_futures: HashMap<IpAddr, AsyncJoinHandle<()>>,
     /// Receiving channel for node events.
     node_event_rx: Receiver<NodeEvent>,
     /// Ids of active nodes mapped to Connection id, node command sender and handle on the associated node worker.
@@ -71,6 +72,9 @@ pub struct NetworkWorker {
 
     node_result_rx: Receiver<(NodeId, Result<ConnectionClosureReason, NetworkError>)>,
     node_result_tx: Sender<(NodeId, Result<ConnectionClosureReason, NetworkError>)>,
+
+    handshake_peer_list_tx: Sender<IpAddr>,
+    handshake_peer_list_rx: Receiver<IpAddr>,
 }
 
 pub struct NetworkWorkerChannels {
@@ -117,6 +121,9 @@ impl NetworkWorker {
         let (node_result_tx, node_result_rx) =
             bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
 
+        // TODO: config size.
+        let (handshake_peer_list_tx, handshake_peer_list_rx) = bounded::<IpAddr>(1);
+
         let (node_event_tx, node_event_rx) = bounded::<NodeEvent>(cfg.node_event_channel_size);
         let max_wait_event = cfg.max_send_wait_network_event.to_duration();
         NetworkWorker {
@@ -131,7 +138,7 @@ impl NetworkWorker {
             controller_manager_rx,
             running_handshakes: HashSet::new(),
             handshake_futures: FuturesUnordered::new(),
-            handshake_peer_list_futures: FuturesUnordered::new(),
+            handshake_peer_list_futures: Default::default(),
             node_event_rx,
             active_nodes: HashMap::new(),
             active_connections: HashMap::new(),
@@ -142,6 +149,8 @@ impl NetworkWorker {
             handshake_join_handle,
             node_result_rx,
             node_result_tx,
+            handshake_peer_list_tx,
+            handshake_peer_list_rx,
         }
     }
 
@@ -209,6 +218,16 @@ impl NetworkWorker {
                     self.on_node_event(
                         evt.or(Err(NetworkError::ChannelError("node event rx failed".into())))?
                     );
+                }
+
+                // Try peer list future finished
+                recv(self.handshake_peer_list_rx) -> msg => {
+                    match msg {
+                        Err(_) => {},
+                        Ok(ip) => {
+                           self.handshake_peer_list_futures.remove(&ip);
+                        }
+                    }
                 }
 
                 // Active node run result
@@ -306,6 +325,11 @@ impl NetworkWorker {
             handle
                 .join()
                 .expect("Failed to join on a node worker thread at shutdown.");
+        }
+
+        // Abort all the pending peerlist tasks
+        for (_, handle) in self.handshake_peer_list_futures.drain() {
+            handle.abort();
         }
 
         // Will block until all tasks are finished.
@@ -679,7 +703,7 @@ impl NetworkWorker {
     /// Spawn a future in `self.handshake_peer_list_futures` managed by the
     /// main loop.
     fn try_send_peer_list_in_handshake(
-        &self,
+        &mut self,
         reader: ReadHalf,
         writer: WriteHalf,
         remote_addr: SocketAddr,
@@ -707,6 +731,53 @@ impl NetworkWorker {
             let max_op_datastore_entry_count = self.cfg.max_op_datastore_entry_count;
             let max_op_datastore_key_length = self.cfg.max_op_datastore_key_length;
             let max_op_datastore_value_length = self.cfg.max_op_datastore_value_length;
+            let sender_clone = self.handshake_peer_list_tx.clone();
+            let ip = remote_addr.ip();
+            self.handshake_peer_list_futures
+                .insert(remote_addr.ip(), tokio::spawn(async move {
+                    let mut writer = WriteBinder::new(writer, max_bytes_read, max_message_size);
+                    let mut reader = ReadBinder::new(
+                        reader,
+                        max_bytes_write,
+                        max_message_size,
+                        MessageDeserializer::new(
+                            thread_count,
+                            endorsement_count,
+                            max_advertise_length,
+                            max_ask_blocks,
+                            max_operations_per_block,
+                            max_operations_per_message,
+                            max_endorsements_per_message,
+                            max_datastore_value_length,
+                            max_function_name_length,
+                            max_parameters_size,
+                            max_op_datastore_entry_count,
+                            max_op_datastore_key_length,
+                            max_op_datastore_value_length,
+                        ),
+                    );
+                    match tokio::time::timeout(
+                        timeout,
+                        futures::future::try_join(writer.send(&msg), reader.next()),
+                    )
+                    .await
+                    {
+                        Ok(Err(e)) => {
+                            massa_trace!("Ignored network error when sending peer list", {
+                                "error": format!("{:?}", e)
+                            })
+                        }
+                        Err(_) => massa_trace!("Ignored timeout error when sending peer list", {}),
+                        _ => (),
+                    }
+                    // Notify end of task to network worker.
+                    Handle::current()
+                        .spawn_blocking(move || {
+                            let _ = sender_clone.send(ip);
+                        })
+                        .await
+                        .expect("Failed to run task to send peer list task end notification to network worker.");
+                }));
         }
     }
 
