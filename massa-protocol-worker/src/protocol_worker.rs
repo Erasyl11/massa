@@ -152,7 +152,10 @@ pub struct ProtocolWorker {
     block_ask_timer: Receiver<Instant>,
     /// Operation pruning timer.
     pub(crate) operation_prune_timer: Receiver<Instant>,
+    /// Operation announcement timer.
     operation_announcement_interval: Receiver<Instant>,
+    /// Operation batch proc period timer.
+    pub(crate) operation_batch_proc_period_timer: Receiver<Instant>,
 }
 
 /// channels used by the protocol worker
@@ -192,6 +195,7 @@ impl ProtocolWorker {
         let block_ask_timer = after(config.ask_block_timeout.into());
         let operation_prune_timer = after(config.asked_operations_pruning_period.into());
         let operation_announcement_interval = after(config.operation_announcement_interval.into());
+        let operation_batch_proc_period_timer = after(config.operation_batch_proc_period.into());
         ProtocolWorker {
             config,
             network_command_sender,
@@ -216,6 +220,7 @@ impl ProtocolWorker {
             block_ask_timer,
             operation_prune_timer,
             operation_announcement_interval,
+            operation_batch_proc_period_timer,
         }
     }
 
@@ -230,9 +235,6 @@ impl ProtocolWorker {
     /// Consensus work is managed here.
     /// It's mostly a `tokio::select!` within a loop.
     pub fn run_loop(mut self) -> Result<NetworkEventReceiver, ProtocolError> {
-        let operation_prune_timer = after(self.config.asked_operations_pruning_period.into());
-        let mut operation_batch_proc_period_timer =
-            after(self.config.operation_batch_proc_period.into());
         loop {
             massa_trace!("protocol.protocol_worker.run_loop.begin", {});
             /*
@@ -277,11 +279,11 @@ impl ProtocolWorker {
                 }
 
                 // operation ask timer
-                recv(operation_batch_proc_period_timer) -> _ => {
+                recv(self.operation_batch_proc_period_timer) -> _ => {
                     massa_trace!("protocol.protocol_worker.run_loop.operation_ask_and_announce_timer", { });
 
                     // Update operations to ask.
-                    operation_batch_proc_period_timer = after(self.update_ask_operation()?);
+                    self.update_ask_operation()?;
                 }
                 // operation prune timer
                 recv(self.operation_prune_timer) -> _ => {

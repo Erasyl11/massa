@@ -162,7 +162,7 @@ impl ProtocolWorker {
         Ok(())
     }
 
-    pub(crate) fn update_ask_operation(&mut self) -> Result<Duration, ProtocolError> {
+    pub(crate) fn update_ask_operation(&mut self) -> Result<(), ProtocolError> {
         let now = Instant::now();
         while !self.op_batch_buffer.is_empty()
         // This unwrap is ok because we checked that it's not empty just before.
@@ -183,7 +183,8 @@ impl ProtocolWorker {
                 .ok_or(TimeError::TimeOverflowError)?;
             next_tick.elapsed()
         };
-        Ok(timer)
+        self.operation_batch_proc_period_timer = after(timer);
+        Ok(())
     }
 
     /// Process the reception of a batch of asked operations, that means that
