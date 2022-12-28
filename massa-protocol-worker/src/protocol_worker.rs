@@ -152,6 +152,7 @@ pub struct ProtocolWorker {
     block_ask_timer: Receiver<Instant>,
     /// Operation pruning timer.
     pub(crate) operation_prune_timer: Receiver<Instant>,
+    operation_announcement_interval: Receiver<Instant>,
 }
 
 /// channels used by the protocol worker
@@ -187,8 +188,10 @@ impl ProtocolWorker {
         pool_controller: Box<dyn PoolController>,
         storage: Storage,
     ) -> ProtocolWorker {
+        // TODO: Config variable for the moment 10000 (prune) (100 seconds)
         let block_ask_timer = after(config.ask_block_timeout.into());
         let operation_prune_timer = after(config.asked_operations_pruning_period.into());
+        let operation_announcement_interval = after(config.operation_announcement_interval.into());
         ProtocolWorker {
             config,
             network_command_sender,
@@ -212,6 +215,7 @@ impl ProtocolWorker {
             ),
             block_ask_timer,
             operation_prune_timer,
+            operation_announcement_interval,
         }
     }
 
@@ -226,12 +230,9 @@ impl ProtocolWorker {
     /// Consensus work is managed here.
     /// It's mostly a `tokio::select!` within a loop.
     pub fn run_loop(mut self) -> Result<NetworkEventReceiver, ProtocolError> {
-        // TODO: Config variable for the moment 10000 (prune) (100 seconds)
         let operation_prune_timer = after(self.config.asked_operations_pruning_period.into());
         let mut operation_batch_proc_period_timer =
             after(self.config.operation_batch_proc_period.into());
-        let mut operation_announcement_interval =
-            after(self.config.operation_announcement_interval.into());
         loop {
             massa_trace!("protocol.protocol_worker.run_loop.begin", {});
             /*
@@ -270,9 +271,9 @@ impl ProtocolWorker {
                 }
 
                 // Operation announcement interval.
-                recv(operation_announcement_interval) -> _ => {
+                recv(self.operation_announcement_interval) -> _ => {
                     // Announce operations.
-                    operation_announcement_interval = after(self.announce_ops());
+                    self.announce_ops();
                 }
 
                 // operation ask timer
@@ -299,7 +300,7 @@ impl ProtocolWorker {
     /// Side effects:
     /// - notes nodes as knowing about those operations from now on.
     /// - empties the buffer of operations to announce.
-    fn announce_ops(&mut self) -> Duration {
+    fn announce_ops(&mut self) {
         // Quit if empty  to avoid iterating on nodes
         if self.operations_to_announce.is_empty() {
             // Reset timer.
@@ -307,7 +308,8 @@ impl ProtocolWorker {
             let next_tick = now
                 .checked_add(self.config.operation_announcement_interval.into())
                 .expect("time overflow");
-            return next_tick.elapsed();
+            self.operation_announcement_interval = after(next_tick.elapsed());
+            return;
         }
         let operation_ids = mem::take(&mut self.operations_to_announce);
         massa_trace!("protocol.protocol_worker.announce_ops.begin", {
@@ -337,7 +339,7 @@ impl ProtocolWorker {
         let next_tick = now
             .checked_add(self.config.operation_announcement_interval.into())
             .expect("time overflow");
-        next_tick.elapsed()
+        self.operation_announcement_interval = after(next_tick.elapsed());
     }
 
     /// Add an list of operations to a buffer for announcement at the next interval,
