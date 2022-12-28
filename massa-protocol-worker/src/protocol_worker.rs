@@ -233,19 +233,10 @@ impl ProtocolWorker {
     /// - `node_event_rx`
     /// And at the end every thing is closed properly
     /// Consensus work is managed here.
-    /// It's mostly a `tokio::select!` within a loop.
+    /// It's mostly a `crossbeam::select!` within a loop.
     pub fn run_loop(mut self) -> Result<NetworkEventReceiver, ProtocolError> {
         loop {
             massa_trace!("protocol.protocol_worker.run_loop.begin", {});
-            /*
-                select! without the "biased" modifier will randomly select the 1st branch to check,
-                then will check the next ones in the order they are written.
-                We choose this order:
-                    * manager commands: low freq, avoid having to wait to stop
-                    * incoming commands (high frequency): process commands in priority (this is a high-level crate so we prioritize this side to avoid slowing down consensus)
-                    * network events (high frequency): process incoming events
-                    * ask for blocks (timing not important)
-            */
             select! {
                 // listen to management commands
                 recv(self.controller_manager_rx) -> cmd => {
