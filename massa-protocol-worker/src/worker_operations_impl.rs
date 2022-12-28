@@ -152,13 +152,14 @@ impl ProtocolWorker {
 
     /// Clear the `asked_operations` data structure and reset
     /// `ask_operations_timer`
-    pub(crate) fn prune_asked_operations(&mut self) -> Result<Duration, ProtocolError> {
+    pub(crate) fn prune_asked_operations(&mut self) -> Result<(), ProtocolError> {
         self.asked_operations.clear();
         // reset timer
         let instant = Instant::now()
             .checked_add(self.config.asked_operations_pruning_period.into())
             .ok_or(TimeError::TimeOverflowError)?;
-        Ok(instant.elapsed())
+        self.operation_prune_timer = after(instant.elapsed());
+        Ok(())
     }
 
     pub(crate) fn update_ask_operation(&mut self) -> Result<Duration, ProtocolError> {
