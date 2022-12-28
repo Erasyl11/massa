@@ -148,6 +148,8 @@ pub struct ProtocolWorker {
     pub(crate) storage: Storage,
     /// Operations to announce at the next interval.
     operations_to_announce: Vec<OperationId>,
+    /// Block timer
+    block_ask_timer: Receiver<Instant>,
 }
 
 /// channels used by the protocol worker
@@ -183,6 +185,7 @@ impl ProtocolWorker {
         pool_controller: Box<dyn PoolController>,
         storage: Storage,
     ) -> ProtocolWorker {
+        let block_ask_timer = after(config.ask_block_timeout.into());
         ProtocolWorker {
             config,
             network_command_sender,
@@ -204,6 +207,7 @@ impl ProtocolWorker {
             operations_to_announce: Vec::with_capacity(
                 config.operation_announcement_buffer_capacity,
             ),
+            block_ask_timer,
         }
     }
 
@@ -220,7 +224,6 @@ impl ProtocolWorker {
     pub fn run_loop(mut self) -> Result<NetworkEventReceiver, ProtocolError> {
         // TODO: Config variable for the moment 10000 (prune) (100 seconds)
         let mut operation_prune_timer = after(self.config.asked_operations_pruning_period.into());
-        let mut block_ask_timer = after(self.config.ask_block_timeout.into());
         let mut operation_batch_proc_period_timer =
             after(self.config.operation_batch_proc_period.into());
         let mut operation_announcement_interval =
@@ -257,9 +260,9 @@ impl ProtocolWorker {
                 // listen to network controller events
 
                 // block ask timer
-                recv(block_ask_timer) -> _ => {
+                recv(self.block_ask_timer) -> _ => {
                     massa_trace!("protocol.protocol_worker.run_loop.block_ask_timer", { });
-                    block_ask_timer = after(self.update_ask_block()?);
+                    self.update_ask_block()?;
                 }
 
                 // Operation announcement interval.
@@ -511,7 +514,7 @@ impl ProtocolWorker {
         Ok(())
     }
 
-    pub(crate) fn update_ask_block(&mut self) -> Result<Duration, ProtocolError> {
+    pub(crate) fn update_ask_block(&mut self) -> Result<(), ProtocolError> {
         massa_trace!("protocol.protocol_worker.update_ask_block.begin", {});
         let now = std::time::Instant::now();
 
@@ -707,7 +710,10 @@ impl ProtocolWorker {
                 })?;
         }
 
-        Ok(next_tick.elapsed())
+        // Update timer.
+        self.block_ask_timer = after(next_tick.elapsed());
+
+        Ok(())
     }
 
     /// Ban a node.
