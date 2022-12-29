@@ -1,6 +1,7 @@
 // Copyright (c) 2022 MASSA LABS <info@massa.net>
 
 use crate::{ProtocolCommand, ProtocolCommandSender};
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 use massa_models::block::BlockId;
 use massa_time::MassaTime;
 use tokio::{sync::mpsc, time::sleep};
@@ -8,13 +9,13 @@ use tokio::{sync::mpsc, time::sleep};
 /// Mock of the protocol
 /// TODO: Improve doc
 pub struct MockProtocolController {
-    protocol_command_rx: mpsc::Receiver<ProtocolCommand>,
+    protocol_command_rx: Receiver<ProtocolCommand>,
 }
 
 impl MockProtocolController {
     /// Creates a new protocol mock
     pub fn new() -> (Self, ProtocolCommandSender) {
-        let (protocol_command_tx, protocol_command_rx) = mpsc::channel::<ProtocolCommand>(256);
+        let (protocol_command_tx, protocol_command_rx) = bounded::<ProtocolCommand>(256);
         (
             MockProtocolController {
                 protocol_command_rx,
