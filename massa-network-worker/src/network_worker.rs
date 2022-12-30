@@ -179,7 +179,14 @@ impl NetworkWorker {
                     debug!("starting outgoing connection attempt towards ip={}", ip);
                     massa_trace!("out_connection_attempt_start", { "ip": ip });
                     self.peer_info_db.new_out_connection_attempt(&ip)?;
-                    let mut connector = self.establisher.get_connector(self.cfg.connect_timeout)?;
+
+                    // Run the future on the current thread.
+                    let mut connector = self.runtime.block_on(async {
+                        self.establisher
+                            .get_connector(self.cfg.connect_timeout)
+                            .await
+                    })?;
+
                     let addr = SocketAddr::new(ip, self.cfg.protocol_port);
                     out_connecting_futures.push(async move {
                         match connector.connect(addr).await {
