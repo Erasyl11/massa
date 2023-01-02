@@ -138,7 +138,7 @@ impl HandshakeWorker {
     /// Consumes self.
     /// Returns a tuple `(ConnectionId, Result)`.
     /// Creates the binders to communicate with that node.
-    async fn run(mut self) -> HandshakeReturnType {
+    pub async fn run(mut self) -> HandshakeReturnType {
         // generate random bytes
         let mut self_random_bytes = [0u8; 32];
         StdRng::from_entropy().fill_bytes(&mut self_random_bytes);

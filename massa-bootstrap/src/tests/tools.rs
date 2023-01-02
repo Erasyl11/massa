@@ -28,6 +28,7 @@ use massa_models::config::{
     MAX_OPERATION_DATASTORE_KEY_LENGTH, MAX_OPERATION_DATASTORE_VALUE_LENGTH, MAX_PARAMETERS_SIZE,
     MAX_PRODUCTION_STATS_LENGTH, MAX_ROLLS_COUNT_LENGTH, PERIODS_PER_CYCLE, THREAD_COUNT,
 };
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 use massa_models::{
     address::Address,
     amount::Amount,
@@ -55,7 +56,7 @@ use std::{
 };
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
-use tokio::{sync::mpsc::Receiver, time::sleep};
+use tokio::time::sleep;
 
 pub const BASE_BOOTSTRAP_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(169, 202, 0, 10));
 
@@ -338,15 +339,14 @@ pub async fn wait_network_command<F, T>(
 where
     F: Fn(NetworkCommand) -> Option<T>,
 {
-    let timer = sleep(timeout.into());
-    tokio::pin!(timer);
+    let timer = after(timeout.into());
     loop {
-        tokio::select! {
-            cmd = network_command_receiver.recv() => match cmd {
-                Some(orig_evt) => if let Some(res_evt) = filter_map(orig_evt) { return Some(res_evt); },
+        select! {
+            recv(network_command_receiver) -> cmd => match cmd {
+                Ok(orig_evt) => if let Some(res_evt) = filter_map(orig_evt) { return Some(res_evt); },
                 _ => panic!("network event channel died")
             },
-            _ = &mut timer => return None
+            recv(timer) -> _ => return None
         }
     }
 }

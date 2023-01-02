@@ -35,6 +35,7 @@ use tempfile::NamedTempFile;
 use tokio::time::sleep;
 use tokio::{sync::oneshot, task::JoinHandle, time::timeout};
 use tracing::trace;
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 
 pub fn get_dummy_block_id(s: &str) -> BlockId {
     BlockId(Hash::compute_from(s.as_bytes()))
@@ -84,21 +85,19 @@ pub async fn full_connection_to_controller(
     // perform handshake
     let keypair = KeyPair::generate();
     let mock_node_id = NodeId(keypair.get_public_key());
-    let res = HandshakeWorker::spawn(
+    let res = HandshakeWorker::new(
         mock_read_half,
         mock_write_half,
         mock_node_id,
         keypair,
         rw_timeout_ms.into(),
         Version::from_str("TEST.1.10").unwrap(),
-        connection_id,
         f64::INFINITY,
         f64::INFINITY,
-    )
+    ).
+    run()
     .await
-    .expect("handshake creation failed")
-    .1
-    .expect("handshake failed");
+    .expect("handshake creation failed");
 
     // wait for a NetworkEvent::NewConnection event
     wait_network_event(
@@ -143,20 +142,18 @@ pub async fn rejected_connection_to_controller(
     // perform handshake and ignore errors
     let keypair = KeyPair::generate();
     let mock_node_id = NodeId(keypair.get_public_key());
-    let result = HandshakeWorker::spawn(
+    let result = HandshakeWorker::new(
         mock_read_half,
         mock_write_half,
         mock_node_id,
         keypair,
         rw_timeout_ms.into(),
         Version::from_str("TEST.1.10").unwrap(),
-        connection_id,
         f64::INFINITY,
         f64::INFINITY,
     )
-    .await
-    .expect("handshake creation failed")
-    .1;
+    .run()
+    .await;
 
     let ret = if let Err(err) = result {
         err
@@ -228,21 +225,19 @@ pub async fn full_connection_from_controller(
     // perform handshake
     let keypair = KeyPair::generate();
     let mock_node_id = NodeId(keypair.get_public_key());
-    let res = HandshakeWorker::spawn(
+    let res = HandshakeWorker::new(
         mock_read_half,
         mock_write_half,
         mock_node_id,
         keypair,
         rw_timeout_ms.into(),
         Version::from_str("TEST.1.10").unwrap(),
-        connection_id,
         f64::INFINITY,
         f64::INFINITY,
     )
+    .run()
     .await
-    .expect("handshake creation failed")
-    .1
-    .expect("handshake failed");
+    .expect("handshake creation failed");
 
     // wait for a NetworkEvent::NewConnection event
     wait_network_event(
@@ -273,15 +268,14 @@ pub async fn wait_network_event<F, T>(
 where
     F: Fn(NetworkEvent) -> Option<T>,
 {
-    let timer = sleep(timeout.into());
-    tokio::pin!(timer);
+    let timer = after(timeout.into());
     loop {
-        tokio::select! {
-            evt_opt = network_event_receiver.wait_event() => match evt_opt {
+        select! {
+            recv(network_event_receiver.0) -> evt_opt => match evt_opt {
                 Ok(orig_evt) => if let Some(res_evt) = filter_map(orig_evt) { return Some(res_evt); },
                 _ => panic!("network event channel died")
             },
-            _ = &mut timer => return None
+            recv(timer) -> _ => return None
         }
     }
 }

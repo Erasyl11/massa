@@ -45,6 +45,7 @@ use serial_test::serial;
 use std::{path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 use tempfile::TempDir;
 use tokio::sync::mpsc;
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 
 lazy_static::lazy_static! {
     pub static ref BOOTSTRAP_CONFIG_KEYPAIR: (BootstrapConfig, KeyPair) = {
@@ -64,7 +65,7 @@ async fn test_bootstrap_server() {
 
     let (consensus_controller, mut consensus_event_receiver) =
         MockConsensusController::new_with_receiver();
-    let (network_cmd_tx, mut network_cmd_rx) = mpsc::channel::<NetworkCommand>(5);
+    let (network_cmd_tx, mut network_cmd_rx) = bounded::<NetworkCommand>(5);
 
     // setup final state local config
     let temp_dir = TempDir::new().unwrap();

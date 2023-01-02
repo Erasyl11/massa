@@ -7,7 +7,7 @@ use massa_models::{
     operation::WrappedOperation,
     prehash::PreHashSet,
 };
-use massa_network_exports::BlockInfoReply;
+use massa_network_exports::{BlockInfoReply, NetworkCommandSender, NetworkEventReceiver};
 use massa_pool_exports::test_exports::{MockPoolController, PoolEventReceiver};
 use massa_protocol_exports::{
     tests::mock_network_controller::MockNetworkController, ProtocolCommandSender, ProtocolConfig,
@@ -15,6 +15,7 @@ use massa_protocol_exports::{
 };
 use massa_storage::Storage;
 use tokio::sync::mpsc;
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 
 pub async fn protocol_test<F, V>(protocol_config: &ProtocolConfig, test: F)
 where
@@ -43,18 +44,17 @@ where
         MockConsensusController::new_with_receiver();
     // start protocol controller
     let (protocol_command_sender, protocol_command_receiver) =
-        mpsc::channel(protocol_config.controller_channel_size);
+        bounded(protocol_config.controller_channel_size);
     // start protocol controller
     let protocol_manager: ProtocolManager = start_protocol_controller(
         *protocol_config,
-        network_command_sender,
-        network_event_receiver,
+        NetworkCommandSender(network_command_sender),
+        NetworkEventReceiver(network_event_receiver),
         protocol_command_receiver,
         consensus_controller,
         pool_controller,
         Storage::create_root(),
     )
-    .await
     .expect("could not start protocol controller");
 
     let protocol_command_sender = ProtocolCommandSender(protocol_command_sender);
@@ -107,17 +107,16 @@ where
     let storage = Storage::create_root();
     // start protocol controller
     let (protocol_command_sender, protocol_command_receiver) =
-        mpsc::channel(protocol_config.controller_channel_size);
+        bounded(protocol_config.controller_channel_size);
     let protocol_manager = start_protocol_controller(
         *protocol_config,
-        network_command_sender,
-        network_event_receiver,
+        NetworkCommandSender(network_command_sender),
+        NetworkEventReceiver(network_event_receiver),
         protocol_command_receiver,
         consensus_controller,
         pool_controller,
         storage.clone(),
     )
-    .await
     .expect("could not start protocol controller");
 
     let protocol_command_sender = ProtocolCommandSender(protocol_command_sender);
