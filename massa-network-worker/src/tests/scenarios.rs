@@ -11,6 +11,7 @@ use crate::{
     binders::{ReadBinder, WriteBinder},
     NetworkConfig,
 };
+use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
 use enum_map::enum_map;
 use enum_map::EnumMap;
 use massa_hash::Hash;
@@ -37,10 +38,12 @@ use massa_signature::KeyPair;
 use massa_time::MassaTime;
 use serial_test::serial;
 use std::collections::HashMap;
+use std::thread;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     time::{Duration, Instant},
 };
+use tokio::runtime::Handle;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tracing::trace;
@@ -98,46 +101,40 @@ async fn test_node_worker_shutdown() {
     let writer = WriteBinder::new(duplex_mock_write, f64::INFINITY, MAX_MESSAGE_SIZE);
 
     // Note: both channels have size 1.
-    let (node_command_tx, node_command_rx) = mpsc::channel::<NodeCommand>(1);
-    let (node_event_tx, _node_event_rx) = mpsc::channel::<NodeEvent>(1);
+    let (node_command_tx, node_command_rx) = bounded::<NodeCommand>(1);
+    let (node_event_tx, _node_event_rx) = bounded::<NodeEvent>(1);
 
     let keypair = KeyPair::generate();
     let mock_node_id = NodeId(keypair.get_public_key());
 
     let node_worker_command_tx = node_command_tx.clone();
-    let node_fn_handle = tokio::spawn(async move {
-        NodeWorker::new(
+
+    let (node_result_tx, node_result_rx) =
+        bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
+    let node_fn_handle = thread::spawn(move || {
+        let res = NodeWorker::new(
             network_conf,
-            mock_node_id,
+            mock_node_id.clone(),
             reader,
             writer,
             node_worker_command_tx,
             node_command_rx,
             node_event_tx,
+            Handle::current().clone(),
         )
-        .run_loop()
-        .await
+        .run_loop();
+        node_result_tx
+            .send((mock_node_id, res))
+            .expect("Failed to send node run result back to network worker. ");
     });
 
     // Shutdown the worker.
     node_command_tx
         .send(NodeCommand::Close(ConnectionClosureReason::Normal))
-        .await
         .unwrap();
 
-    // Send a bunch of additional commands until the channel is closed,
-    // which would deadlock if not properly handled by the worker.
-    loop {
-        if node_command_tx
-            .send(NodeCommand::Close(ConnectionClosureReason::Normal))
-            .await
-            .is_err()
-        {
-            break;
-        }
-    }
-
-    node_fn_handle.await.unwrap().unwrap();
+    node_result_rx.recv().unwrap();
+    node_fn_handle.join().unwrap();
 }
 
 /// Test that a node worker can send an operations message.
@@ -172,8 +169,8 @@ async fn test_node_worker_operations_message() {
     let writer = WriteBinder::new(duplex_mock_write, f64::INFINITY, MAX_MESSAGE_SIZE);
 
     // Note: both channels have size 1.
-    let (node_command_tx, node_command_rx) = mpsc::channel::<NodeCommand>(1);
-    let (node_event_tx, _node_event_rx) = mpsc::channel::<NodeEvent>(1);
+    let (node_command_tx, node_command_rx) = bounded::<NodeCommand>(1);
+    let (node_event_tx, _node_event_rx) = bounded::<NodeEvent>(1);
 
     let keypair = KeyPair::generate();
     let mock_node_id = NodeId(keypair.get_public_key());
@@ -182,18 +179,23 @@ async fn test_node_worker_operations_message() {
     let transaction = get_transaction(50, 10);
 
     let node_worker_command_tx = node_command_tx.clone();
-    let node_fn_handle = tokio::spawn(async move {
-        NodeWorker::new(
+    let (node_result_tx, node_result_rx) =
+        bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
+    let node_fn_handle = thread::spawn(move || {
+        let res = NodeWorker::new(
             network_conf,
-            mock_node_id,
+            mock_node_id.clone(),
             reader,
             writer,
             node_worker_command_tx,
             node_command_rx,
             node_event_tx,
+            Handle::current().clone(),
         )
-        .run_loop()
-        .await
+        .run_loop();
+        node_result_tx
+            .send((mock_node_id, res))
+            .expect("Failed to send node run result back to network worker. ");
     });
 
     // Send operations message.
@@ -201,24 +203,12 @@ async fn test_node_worker_operations_message() {
         .send(NodeCommand::SendOperations(
             vec![transaction].into_iter().collect(),
         ))
-        .await
         .unwrap();
 
     // TODO: add some infra to receive the message via the duplex mock, and assert it is what is expected.
 
-    // Send a bunch of additional commands until the channel is closed,
-    // which would deadlock if not properly handled by the worker.
-    loop {
-        if node_command_tx
-            .send(NodeCommand::Close(ConnectionClosureReason::Normal))
-            .await
-            .is_err()
-        {
-            break;
-        }
-    }
-
-    node_fn_handle.await.unwrap().unwrap();
+    node_result_rx.recv().unwrap();
+    node_fn_handle.join().unwrap();
 }
 
 // test connecting two different peers simultaneously to the controller
@@ -400,7 +390,6 @@ async fn test_peer_ban() {
             // ban connection1.
             network_command_sender
                 .node_ban_by_ids(vec![conn1_id])
-                .await
                 .expect("error during send ban command.");
 
             // make sure the ban message was processed

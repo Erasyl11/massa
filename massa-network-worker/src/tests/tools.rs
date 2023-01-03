@@ -9,6 +9,7 @@ use crate::NetworkConfig;
 use crate::NetworkError;
 use crate::NetworkEvent;
 
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 use massa_hash::Hash;
 use massa_models::node::NodeId;
 use massa_models::wrapped::WrappedContent;
@@ -35,7 +36,6 @@ use tempfile::NamedTempFile;
 use tokio::time::sleep;
 use tokio::{sync::oneshot, task::JoinHandle, time::timeout};
 use tracing::trace;
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 
 pub fn get_dummy_block_id(s: &str) -> BlockId {
     BlockId(Hash::compute_from(s.as_bytes()))
@@ -94,8 +94,8 @@ pub async fn full_connection_to_controller(
         Version::from_str("TEST.1.10").unwrap(),
         f64::INFINITY,
         f64::INFINITY,
-    ).
-    run()
+    )
+    .run()
     .await
     .expect("handshake creation failed");
 

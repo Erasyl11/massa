@@ -3,6 +3,7 @@
 use super::mock_establisher::Duplex;
 use crate::settings::BootstrapConfig;
 use bitvec::vec::BitVec;
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 use massa_async_pool::test_exports::{create_async_pool, get_random_message};
 use massa_async_pool::{AsyncPoolChanges, Change};
 use massa_consensus_exports::{
@@ -28,7 +29,6 @@ use massa_models::config::{
     MAX_OPERATION_DATASTORE_KEY_LENGTH, MAX_OPERATION_DATASTORE_VALUE_LENGTH, MAX_PARAMETERS_SIZE,
     MAX_PRODUCTION_STATS_LENGTH, MAX_ROLLS_COUNT_LENGTH, PERIODS_PER_CYCLE, THREAD_COUNT,
 };
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 use massa_models::{
     address::Address,
     amount::Amount,

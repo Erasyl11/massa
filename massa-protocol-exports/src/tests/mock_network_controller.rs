@@ -1,5 +1,6 @@
 // Copyright (c) 2022 MASSA LABS <info@massa.net>
 
+use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 use massa_models::{
     block::{BlockId, WrappedHeader},
     endorsement::WrappedEndorsement,
@@ -15,7 +16,6 @@ use massa_network_exports::{
 };
 use massa_time::MassaTime;
 use tokio::{sync::mpsc, time::sleep};
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
 
 /// mock network controller
 pub struct MockNetworkController {
@@ -25,13 +25,8 @@ pub struct MockNetworkController {
 
 impl MockNetworkController {
     /// new mock network controller
-    pub fn new() -> (
-        Self,
-        Sender<NetworkCommand>,
-        Receiver<NetworkEvent>,
-    ) {
-        let (network_command_tx, network_command_rx) =
-            bounded::<NetworkCommand>(CHANNEL_SIZE);
+    pub fn new() -> (Self, Sender<NetworkCommand>, Receiver<NetworkEvent>) {
+        let (network_command_tx, network_command_rx) = bounded::<NetworkCommand>(CHANNEL_SIZE);
         let (network_event_tx, network_event_rx) = bounded::<NetworkEvent>(CHANNEL_SIZE);
         (
             MockNetworkController {
