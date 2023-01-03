@@ -423,7 +423,6 @@ async fn test_peer_ban() {
             // unban connection1.
             network_command_sender
                 .node_unban_ips(vec![mock_addr.ip()])
-                .await
                 .expect("error during send unban command.");
 
             // wait for new connection attempt
@@ -524,7 +523,6 @@ async fn test_peer_ban_by_ip() {
             // ban connection1.
             network_command_sender
                 .node_ban_by_ips(vec![mock_addr.ip()])
-                .await
                 .expect("error during send ban command.");
 
             // make sure the ban message was processed
@@ -558,7 +556,6 @@ async fn test_peer_ban_by_ip() {
             // unban connection1.
             network_command_sender
                 .node_unban_ips(vec![mock_addr.ip()])
-                .await
                 .expect("error during send unban command.");
 
             // wait for new connection attempt
@@ -805,7 +802,6 @@ async fn test_block_not_found() {
             // reply with block not found
             network_command_sender
                 .send_block_info(conn1_id, vec![(wanted_hash,  BlockInfoReply::NotFound)])
-                .await
                 .unwrap();
 
             // let mut  conn1_r = conn1_drain.0.await.unwrap();
@@ -841,7 +837,6 @@ async fn test_block_not_found() {
 
             network_command_sender
                 .ask_for_block_list(block_list)
-                .await
                 .unwrap();
             // receive 2 list
             let timer = sleep(Duration::from_millis(100));
@@ -965,7 +960,6 @@ async fn test_retry_connection_closed() {
             // Ban the node.
             network_command_sender
                 .node_ban_by_ids(vec![node_id])
-                .await
                 .expect("error during send ban command.");
 
             // Make sure network sends a dis-connect event.
@@ -985,7 +979,6 @@ async fn test_retry_connection_closed() {
             // Send a command for a node not found in active.
             network_command_sender
                 .send_block_info(node_id, vec![])
-                .await
                 .unwrap();
 
             // Make sure network re-sends a dis-connect event.
@@ -1094,7 +1087,6 @@ async fn test_operation_messages() {
             // reply with another transaction
             network_command_sender
                 .send_operations(conn1_id, vec![transaction2].into_iter().collect())
-                .await
                 .unwrap();
 
             // let mut  conn1_r = conn1_drain.0.await.unwrap();
@@ -1233,7 +1225,6 @@ async fn test_endorsements_messages() {
             // reply with another endorsement
             network_command_sender
                 .send_endorsements(conn1_id, vec![endorsement.clone()])
-                .await
                 .unwrap();
 
             let timer = sleep(Duration::from_millis(500));
