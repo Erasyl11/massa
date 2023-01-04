@@ -269,7 +269,7 @@ impl NetworkWorker {
                         .remove(&node_id) {
                         massa_trace!("protocol channel closed", {"node_id": node_id});
                         self.connection_closed(connection_id, reason)?;
-                        join_handle.join();
+                        join_handle.join().expect("Failed to join on node worker handle.");
                     }
                 }
 

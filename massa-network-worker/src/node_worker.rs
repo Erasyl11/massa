@@ -187,7 +187,6 @@ impl NodeWorker {
         let node_reader_handle = self.runtime_handle.spawn(async move {
             node_reader_handle(
                 &mut socket_reader,
-                &mut node_event_tx,
                 self.node_id,
                 self.cfg.max_send_wait_node_event,
                 message_tx,
@@ -378,7 +377,6 @@ fn node_writer_handle(
 // via 'node_event_tx' queue
 async fn node_reader_handle(
     socket_reader: &mut ReadBinder,
-    node_event_tx: &mut Sender<NodeEvent>,
     node_id: NodeId,
     max_send_wait: MassaTime,
     message_chan: Sender<Message>,
