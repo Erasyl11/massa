@@ -256,6 +256,12 @@ impl ProtocolWorker {
                 }
 
                 // listen to network controller events
+                recv(self.network_event_receiver.0) -> msg => {
+                    match msg {
+                        Err(_) => break,
+                        Ok(evt) => self.on_network_event(evt)?
+                    };
+                }
 
                 // block ask timer
                 recv(self.block_ask_timer) -> _ => {
