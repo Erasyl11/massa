@@ -224,7 +224,7 @@ impl NetworkWorker {
                 recv(self.node_event_rx) -> evt => {
                     self.on_node_event(
                         evt.or(Err(NetworkError::ChannelError("node event rx failed".into())))?
-                    );
+                        )?;
                 }
 
                 // Try peer list future finished
@@ -833,7 +833,7 @@ impl NetworkWorker {
     ///
     /// # Argument
     /// * `evt`: optional node event to process.
-    async fn on_node_event(&mut self, evt: NodeEvent) -> Result<(), NetworkError> {
+    fn on_node_event(&mut self, evt: NodeEvent) -> Result<(), NetworkError> {
         use crate::network_event::*;
         match evt {
             // received a list of peers
