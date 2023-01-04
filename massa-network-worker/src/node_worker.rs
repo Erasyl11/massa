@@ -28,8 +28,6 @@ pub struct NodeWorker {
     socket_reader_opt: Option<ReadBinder>,
     /// Optional writer to send data.
     socket_writer_opt: Option<WriteBinder>,
-    /// Channel to send node commands.
-    node_command_tx: Sender<NodeCommand>,
     /// Channel to receive node commands.
     node_command_rx: Receiver<NodeCommand>,
     /// Channel to send node events.
@@ -55,7 +53,6 @@ impl NodeWorker {
         node_id: NodeId,
         socket_reader: ReadBinder,
         socket_writer: WriteBinder,
-        node_command_tx: Sender<NodeCommand>,
         node_command_rx: Receiver<NodeCommand>,
         node_event_tx: Sender<NodeEvent>,
         runtime_handle: Handle,
@@ -65,7 +62,6 @@ impl NodeWorker {
             node_id,
             socket_reader_opt: Some(socket_reader),
             socket_writer_opt: Some(socket_writer),
-            node_command_tx,
             node_command_rx,
             node_event_tx,
             runtime_handle,

@@ -107,8 +107,6 @@ async fn test_node_worker_shutdown() {
     let keypair = KeyPair::generate();
     let mock_node_id = NodeId(keypair.get_public_key());
 
-    let node_worker_command_tx = node_command_tx.clone();
-
     let (node_result_tx, node_result_rx) =
         bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
     let node_fn_handle = thread::spawn(move || {
@@ -117,7 +115,6 @@ async fn test_node_worker_shutdown() {
             mock_node_id.clone(),
             reader,
             writer,
-            node_worker_command_tx,
             node_command_rx,
             node_event_tx,
             Handle::current().clone(),
@@ -178,7 +175,6 @@ async fn test_node_worker_operations_message() {
     // Create transaction.
     let transaction = get_transaction(50, 10);
 
-    let node_worker_command_tx = node_command_tx.clone();
     let (node_result_tx, node_result_rx) =
         bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
     let node_fn_handle = thread::spawn(move || {
@@ -187,7 +183,6 @@ async fn test_node_worker_operations_message() {
             mock_node_id.clone(),
             reader,
             writer,
-            node_worker_command_tx,
             node_command_rx,
             node_event_tx,
             Handle::current().clone(),
