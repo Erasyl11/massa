@@ -20,6 +20,7 @@ use massa_network_exports::{
 };
 use massa_signature::KeyPair;
 use std::thread;
+use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
@@ -95,9 +96,15 @@ pub async fn start_network_controller(
     // create listener
     let listener = establisher.get_listener(network_settings.bind).await?;
 
+    let runtime = Runtime::new().expect("Failed to initialize networking runtime.");
+
     debug!("Loading peer database");
     // load peer info database
-    let mut peer_info_db = PeerInfoDatabase::new(network_settings, clock_compensation).await?;
+    let mut peer_info_db = PeerInfoDatabase::new(
+        network_settings,
+        clock_compensation,
+        runtime.handle().clone(),
+    )?;
 
     // add bootstrap peers
     if let Some(peers) = initial_peers {
@@ -125,6 +132,7 @@ pub async fn start_network_controller(
                 controller_manager_rx,
             },
             version,
+            runtime,
         )
         .run_loop();
         match res {

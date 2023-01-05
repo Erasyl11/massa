@@ -14,10 +14,11 @@ use massa_time::MassaTime;
 use serde_json::json;
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{read_to_string, File};
 use std::io::Write;
 use std::net::IpAddr;
 use std::path::Path;
+use tokio::runtime::Handle;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
@@ -174,31 +175,32 @@ impl PeerInfoDatabase {
     /// # Argument
     /// * `cfg`: network configuration
     /// * `clock_compensation`: sync with server
-    pub async fn new(cfg: &NetworkConfig, clock_compensation: i64) -> Result<Self, NetworkError> {
+    pub fn new(
+        cfg: &NetworkConfig,
+        clock_compensation: i64,
+        runtime: Handle,
+    ) -> Result<Self, NetworkError> {
         // wakeup interval
         let wakeup_interval = cfg.wakeup_interval;
 
         // load from initial file
-        let mut peers = serde_json::from_str::<Vec<PeerInfo>>(
-            &tokio::fs::read_to_string(&cfg.initial_peers_file).await?,
-        )?
-        .into_iter()
-        .map(|mut p| {
-            p.cleanup();
-            (p.ip, p)
-        })
-        .collect::<HashMap<IpAddr, PeerInfo>>();
-        if cfg.peers_file.is_file() {
-            peers.extend(
-                // previously known peers
-                serde_json::from_str::<Vec<PeerInfo>>(
-                    &tokio::fs::read_to_string(&cfg.peers_file).await?,
-                )?
+        let mut peers =
+            serde_json::from_str::<Vec<PeerInfo>>(&read_to_string(&cfg.initial_peers_file)?)?
                 .into_iter()
                 .map(|mut p| {
                     p.cleanup();
                     (p.ip, p)
-                }),
+                })
+                .collect::<HashMap<IpAddr, PeerInfo>>();
+        if cfg.peers_file.is_file() {
+            peers.extend(
+                // previously known peers
+                serde_json::from_str::<Vec<PeerInfo>>(&read_to_string(&cfg.peers_file)?)?
+                    .into_iter()
+                    .map(|mut p| {
+                        p.cleanup();
+                        (p.ip, p)
+                    }),
             );
         }
 
@@ -210,10 +212,11 @@ impl PeerInfoDatabase {
         let peers_file_dump_interval = cfg.peers_file_dump_interval;
         let (saver_watch_tx, mut saver_watch_rx) = watch::channel(peers.clone());
         let mut need_dump = false;
-        let saver_join_handle = tokio::spawn(async move {
+        let saver_join_handle = runtime.spawn(async move {
             let delay = sleep(Duration::from_millis(0));
             tokio::pin!(delay);
             loop {
+                let peers_file = peers_file.clone();
                 tokio::select! {
                     opt_p = saver_watch_rx.changed() => match opt_p {
                         Ok(_) => if !need_dump {
@@ -224,8 +227,13 @@ impl PeerInfoDatabase {
                     },
                     _ = &mut delay, if need_dump => {
                         let to_dump = saver_watch_rx.borrow().clone();
-                        match dump_peers(&to_dump, &peers_file) {
-                            Ok(_) => { need_dump = false; },
+                        let res = Handle::current()
+                            .spawn_blocking(move || dump_peers(&to_dump, &peers_file))
+                            .await;
+                        match res {
+                            Ok(_) => {
+                                need_dump = false;
+                            }
                             Err(e) => {
                                 warn!("could not dump peers to file: {}", e);
                                 delay.set(sleep(peers_file_dump_interval.to_duration()));

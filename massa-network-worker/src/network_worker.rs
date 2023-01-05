@@ -107,10 +107,9 @@ impl NetworkWorker {
             controller_manager_rx,
         }: NetworkWorkerChannels,
         version: Version,
+        runtime: Runtime,
     ) -> NetworkWorker {
         let self_node_id = NodeId(keypair.get_public_key());
-
-        let runtime = Runtime::new().expect("Failed to initialize networking runtime.");
 
         // TODO: config size.
         let (conn_tx, connections_rx) = bounded::<(ConnectionId, HandshakeReturnType)>(1);
