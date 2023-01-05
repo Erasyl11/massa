@@ -228,6 +228,8 @@ impl NetworkWorker {
                         }
                     });
                 }
+                
+                // Spawn an async task to handling out connection futures.
                 let out_connection_tx_clone = out_connection_tx.clone();
                 out_connection_handle = Some(self.runtime.spawn(async move {
                     while let Some((ip_addr, res)) = out_connecting_futures.next().await {
