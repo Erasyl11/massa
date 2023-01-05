@@ -213,6 +213,7 @@ impl NetworkWorker {
                     self.peer_info_db.new_out_connection_attempt(&ip)?;
 
                     // Run the future on the current thread.
+                    // Note: this future doesn't actually await anything, consider removing async.
                     let mut connector = self.runtime.block_on(async {
                         self.establisher
                             .get_connector(self.cfg.connect_timeout)
