@@ -228,7 +228,7 @@ impl NetworkWorker {
                         }
                     });
                 }
-                
+
                 // Spawn an async task to handling out connection futures.
                 let out_connection_tx_clone = out_connection_tx.clone();
                 out_connection_handle = Some(self.runtime.spawn(async move {
@@ -391,6 +391,9 @@ impl NetworkWorker {
         for (_, handle) in self.handshake_peer_list_futures.drain() {
             handle.abort();
         }
+
+        // stop peer info db
+        self.peer_info_db.stop()?;
 
         // Will block until all tasks are finished.
         drop(self.runtime);

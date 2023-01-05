@@ -14,12 +14,15 @@ use massa_time::MassaTime;
 use serde_json::json;
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
 use std::net::IpAddr;
 use std::path::Path;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
 use tracing::{trace, warn};
+
 /// Contains all information about every peers we know about.
 pub struct PeerInfoDatabase {
     /// Network configuration.
@@ -43,10 +46,7 @@ pub struct PeerInfoDatabase {
 /// # Arguments
 /// * `peers`: peers to save
 /// * `file_path`: path to the file
-async fn dump_peers(
-    peers: &HashMap<IpAddr, PeerInfo>,
-    file_path: &Path,
-) -> Result<(), NetworkError> {
+fn dump_peers(peers: &HashMap<IpAddr, PeerInfo>, file_path: &Path) -> Result<(), NetworkError> {
     let peer_vec: Vec<_> = peers
         .values()
         .filter(|v| v.advertised || v.peer_type != PeerType::Standard || v.banned)
@@ -62,7 +62,8 @@ async fn dump_peers(
         })
         .collect();
 
-    tokio::fs::write(file_path, serde_json::to_string_pretty(&peer_vec)?).await?;
+    let mut file = File::create(file_path)?;
+    file.write_all(&serde_json::to_vec_pretty(&peer_vec)?)?;
 
     Ok(())
 }
@@ -223,7 +224,7 @@ impl PeerInfoDatabase {
                     },
                     _ = &mut delay, if need_dump => {
                         let to_dump = saver_watch_rx.borrow().clone();
-                        match dump_peers(&to_dump, &peers_file).await {
+                        match dump_peers(&to_dump, &peers_file) {
                             Ok(_) => { need_dump = false; },
                             Err(e) => {
                                 warn!("could not dump peers to file: {}", e);
@@ -249,10 +250,10 @@ impl PeerInfoDatabase {
 
     /// Cleanly closes `peerInfoDatabase`, performing one last peer dump.
     /// A warning is raised on dump failure.
-    pub async fn stop(self) -> Result<(), NetworkError> {
+    pub fn stop(self) -> Result<(), NetworkError> {
         drop(self.saver_watch_tx);
-        self.saver_join_handle.await?;
-        if let Err(e) = dump_peers(&self.peers, &self.network_settings.peers_file).await {
+        self.saver_join_handle.abort();
+        if let Err(e) = dump_peers(&self.peers, &self.network_settings.peers_file) {
             warn!("could not dump peers to file: {}", e);
         }
         Ok(())
