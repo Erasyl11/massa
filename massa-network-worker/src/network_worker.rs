@@ -39,7 +39,7 @@ pub struct NetworkWorker {
     /// Our node id.
     pub(crate) self_node_id: NodeId,
     /// Listener part of the establisher.
-    listener: Listener,
+    listener: Option<Listener>,
     /// The connection establisher.
     establisher: Establisher,
     /// Database with peer information.
@@ -130,7 +130,7 @@ impl NetworkWorker {
             cfg,
             self_node_id,
             keypair,
-            listener,
+            listener: Some(listener),
             establisher,
             peer_info_db,
             controller_command_rx,
@@ -160,6 +160,38 @@ impl NetworkWorker {
         let mut out_connection_handle = None;
         let mut out_connection_rx = None;
         let mut cur_connection_id = ConnectionId::default();
+
+        // Start a task to run the listener.
+        // TODO: config size.
+        let (listener_tx, listener_rx) = bounded::<(ReadHalf, WriteHalf, SocketAddr)>(1);
+        let mut listener = self
+            .listener
+            .take()
+            .expect("No listener at start of run loop.");
+        let listener_handle = self.runtime.spawn(async move {
+            loop {
+                match listener.accept().await {
+                    Ok(res) => {
+                        let sender = listener_tx.clone();
+                        Handle::current()
+                            .spawn_blocking(move || {
+                                sender
+                                    .send(res)
+                                    .expect("Failed to send listener message to network worker.");
+                            })
+                            .await
+                            .expect(
+                                "Failed to run task to send listener message to network worker.",
+                            );
+                    }
+                    Err(err) => {
+                        debug!("connection accept failed: {}", err);
+                        massa_trace!("in_connection_failed", {"err": err.to_string()});
+                        break;
+                    }
+                }
+            }
+        });
 
         loop {
             if out_connection_rx.is_none() {
@@ -212,7 +244,7 @@ impl NetworkWorker {
             }
 
             select! {
-                // listen to manager commands
+                // listen to manager commands.
                 recv(self.controller_manager_rx) -> cmd => {
                     match cmd {
                         Err(_) => break,
@@ -220,14 +252,14 @@ impl NetworkWorker {
                     }
                 },
 
-                // event received from a node
+                // event received from a node.
                 recv(self.node_event_rx) -> evt => {
                     self.on_node_event(
                         evt.or(Err(NetworkError::ChannelError("node event rx failed".into())))?
                         )?;
                 }
 
-                // Try peer list future finished
+                // Try peer list future finished.
                 recv(self.handshake_peer_list_rx) -> msg => {
                     match msg {
                         Err(_) => {},
@@ -237,7 +269,22 @@ impl NetworkWorker {
                     }
                 }
 
-                // Active node run result
+                // Listener socket received.
+                recv(listener_rx) -> msg => {
+                    match msg {
+                        Err(_) => {},
+                        Ok((reader, writer, remote_addr)) => {
+                            self.manage_in_connections(
+                                reader,
+                                writer,
+                                remote_addr,
+                                &mut cur_connection_id,
+                            )?
+                        }
+                    }
+                }
+
+                // Active node run result.
                 recv(self.node_result_rx) -> msg => {
                     // Should never panic, since the network worker keeps a sender around.
                     let (node_id, res) = msg.expect("Unexpected failure of node worker.");
@@ -273,7 +320,7 @@ impl NetworkWorker {
                     }
                 }
 
-                // incoming command
+                // incoming command.
                 recv(self.controller_command_rx) -> cmd => {
                     if let Ok(cmd) = cmd {
                         self.manage_network_command(cmd)?;
@@ -318,6 +365,9 @@ impl NetworkWorker {
         if let Some(handle) = out_connection_handle {
             handle.abort();
         }
+
+        // Abort the listener task
+        listener_handle.abort();
 
         // Join on the handshake manager thread.
         self.handshake_join_handle
@@ -641,41 +691,35 @@ impl NetworkWorker {
     /// # Arguments
     /// * `re` : `(reader, writer, socketAddr)` in a result coming out of the listener
     /// * `cur_connection_id`: connection id of the node we are trying to reach
-    async fn manage_in_connections(
+    fn manage_in_connections(
         &mut self,
-        res: std::io::Result<(ReadHalf, WriteHalf, SocketAddr)>,
+        reader: ReadHalf,
+        writer: WriteHalf,
+        remote_addr: SocketAddr,
         cur_connection_id: &mut ConnectionId,
     ) -> Result<(), NetworkError> {
-        match res {
-            Ok((reader, writer, remote_addr)) => {
-                match self.peer_info_db.try_new_in_connection(&remote_addr.ip()) {
-                    Ok(_) => {
-                        let connection_id = *cur_connection_id;
-                        debug!(
-                            "inbound connection from addr={} succeeded => connection_id={}",
-                            remote_addr, connection_id
-                        );
-                        massa_trace!("in_connection_established", {
-                            "ip": remote_addr.ip(),
-                            "connection_id": connection_id
-                        });
-                        cur_connection_id.0 += 1;
-                        self.active_connections
-                            .insert(connection_id, (remote_addr.ip(), false));
-                        self.manage_successful_connection(connection_id, reader, writer)?;
-                    }
-                    Err(NetworkError::PeerConnectionError(
-                        NetworkConnectionErrorType::MaxPeersConnectionReached(_),
-                    )) => self.try_send_peer_list_in_handshake(reader, writer, remote_addr),
-                    Err(_) => {
-                        debug!("inbound connection from addr={} refused", remote_addr);
-                        massa_trace!("in_connection_refused", {"ip": remote_addr.ip()});
-                    }
-                }
+        match self.peer_info_db.try_new_in_connection(&remote_addr.ip()) {
+            Ok(_) => {
+                let connection_id = *cur_connection_id;
+                debug!(
+                    "inbound connection from addr={} succeeded => connection_id={}",
+                    remote_addr, connection_id
+                );
+                massa_trace!("in_connection_established", {
+                    "ip": remote_addr.ip(),
+                    "connection_id": connection_id
+                });
+                cur_connection_id.0 += 1;
+                self.active_connections
+                    .insert(connection_id, (remote_addr.ip(), false));
+                self.manage_successful_connection(connection_id, reader, writer)?;
             }
-            Err(err) => {
-                debug!("connection accept failed: {}", err);
-                massa_trace!("in_connection_failed", {"err": err.to_string()});
+            Err(NetworkError::PeerConnectionError(
+                NetworkConnectionErrorType::MaxPeersConnectionReached(_),
+            )) => self.try_send_peer_list_in_handshake(reader, writer, remote_addr),
+            Err(_) => {
+                debug!("inbound connection from addr={} refused", remote_addr);
+                massa_trace!("in_connection_refused", {"ip": remote_addr.ip()});
             }
         }
         Ok(())
