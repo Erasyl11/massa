@@ -179,7 +179,6 @@ impl NodeWorker {
         })?;
 
         let (message_tx, message_rx) = bounded::<Message>(self.cfg.node_command_channel_size); // TODO: config
-        let mut node_event_tx = self.node_event_tx.clone();
         let node_reader_handle = self.runtime_handle.spawn(async move {
             node_reader_handle(
                 &mut socket_reader,
@@ -192,17 +191,13 @@ impl NodeWorker {
         tokio::pin!(node_reader_handle);
 
         let ask_peer_list_interval = tick(self.cfg.ask_peer_list_interval.to_duration());
-        let mut exit_reason = ConnectionClosureReason::Normal;
-        let mut _exit_reason_reader = ConnectionClosureReason::Normal;
-
-        loop {
+        let exit_reason = loop {
             let cmd = select! {
                 recv(message_rx) -> msg => {
                     match msg {
                         Ok(msg) => self.handle_message(msg)?,
                         Err(_) => {
-                            exit_reason = ConnectionClosureReason::Failed;
-                            break
+                            break ConnectionClosureReason::Failed;
                         }
                      }
                      continue;
@@ -225,10 +220,9 @@ impl NodeWorker {
                 self.cfg.max_endorsements_per_message,
                 &self.runtime_handle,
             ) {
-                exit_reason = err;
-                break;
+                break err;
             }
-        }
+        };
 
         // 3- Stop node_reader_handle
         // Abort the task otherwise socket_reader.next() is stuck, waiting for some data to read
