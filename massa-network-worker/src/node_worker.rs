@@ -14,8 +14,8 @@ use massa_network_exports::{
 use massa_time::MassaTime;
 use std::thread::{self, JoinHandle};
 use tokio::runtime::Handle;
-use tokio::{sync::mpsc, task, time::timeout};
-use tracing::{debug, trace, warn};
+use tokio::time::timeout;
+use tracing::{debug, warn};
 
 /// Manages connections
 /// One worker per node.

@@ -21,7 +21,6 @@
 //! ```
 use crate::network_worker::NetworkWorker;
 use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
-use futures::{stream::FuturesUnordered, StreamExt};
 use massa_hash::Hash;
 use massa_logging::massa_trace;
 use massa_models::{
