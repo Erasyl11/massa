@@ -50,8 +50,6 @@ pub struct NetworkWorker {
     controller_manager_rx: Receiver<NetworkManagementCommand>,
     /// Set of connection id of node with running handshake.
     pub(crate) running_handshakes: HashSet<ConnectionId>,
-    /// Running handshakes futures.
-    handshake_futures: FuturesUnordered<JoinHandle<(ConnectionId, HandshakeReturnType)>>,
     /// Running handshakes that send a list of peers.
     handshake_peer_list_futures: HashMap<IpAddr, AsyncJoinHandle<()>>,
     /// Receiving channel for node events.
@@ -136,7 +134,6 @@ impl NetworkWorker {
             event: EventSender::new(controller_event_tx, node_event_tx, max_wait_event),
             controller_manager_rx,
             running_handshakes: HashSet::new(),
-            handshake_futures: FuturesUnordered::new(),
             handshake_peer_list_futures: Default::default(),
             node_event_rx,
             active_nodes: HashMap::new(),
@@ -835,12 +832,7 @@ impl NetworkWorker {
         }
     }
 
-    /// Manage a successful incoming and outgoing connection,
-    /// Check if we're not already running an handshake for `connection_id` by inserting the connection id in
-    /// `self.running_handshakes`
-    /// Add a new handshake to perform in `self.handshake_futures` to be handle in the main loop.
-    ///
-    /// Return an handshake error if connection already running/waiting
+    /// Manage a successful incoming and outgoing connection.
     fn manage_successful_connection(
         &mut self,
         connection_id: ConnectionId,
