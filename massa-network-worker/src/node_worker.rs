@@ -256,7 +256,6 @@ fn node_writer_handle(
     max_endorsements_per_message: u32,
     runtime_handle: &Handle,
 ) -> Result<(), ConnectionClosureReason> {
-    let mut exit_reason = ConnectionClosureReason::Normal;
     let messages_: Option<Vec<Message>> = match node_command {
         Some(NodeCommand::Close(r)) => {
             return Err(r);
