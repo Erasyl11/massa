@@ -20,9 +20,7 @@ use massa_network_exports::{AskForBlocksInfo, BlockInfoReply, NetworkEvent};
 use massa_protocol_exports::ProtocolError;
 use massa_serialization::Serializer;
 use massa_storage::Storage;
-use std::pin::Pin;
 use std::time::Instant;
-use tokio::time::Sleep;
 use tracing::{info, warn};
 
 // static tracing messages

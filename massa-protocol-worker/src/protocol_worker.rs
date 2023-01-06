@@ -24,15 +24,14 @@ use massa_protocol_exports::{
     ProtocolCommand, ProtocolConfig, ProtocolError, ProtocolManagementCommand, ProtocolManager,
 };
 
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::{after, bounded, select, Receiver};
 use massa_models::wrapped::Id;
 use massa_storage::Storage;
 use massa_time::{MassaTime, TimeError};
 use std::collections::{HashMap, HashSet};
 use std::mem;
-use std::pin::Pin;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use tracing::{debug, error, info, warn};
 
 /// start a new `ProtocolController` from a `ProtocolConfig`

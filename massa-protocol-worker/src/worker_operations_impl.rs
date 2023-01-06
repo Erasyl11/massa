@@ -11,7 +11,7 @@
 use std::collections::VecDeque;
 
 use crate::protocol_worker::ProtocolWorker;
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::after;
 use massa_logging::massa_trace;
 use massa_models::{
     node::NodeId,
@@ -20,9 +20,7 @@ use massa_models::{
 };
 use massa_protocol_exports::ProtocolError;
 use massa_time::TimeError;
-use std::pin::Pin;
-use std::time::{Duration, Instant};
-use tokio::time::{sleep_until, Sleep};
+use std::time::Instant;
 use tracing::warn;
 
 /// Structure containing a Batch of `operation_ids` we would like to ask
