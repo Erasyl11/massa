@@ -190,9 +190,8 @@ impl NodeWorker {
             .await
         });
         tokio::pin!(node_reader_handle);
-        let mut reader_joined = false;
 
-        let mut ask_peer_list_interval = tick(self.cfg.ask_peer_list_interval.to_duration());
+        let ask_peer_list_interval = tick(self.cfg.ask_peer_list_interval.to_duration());
         let mut exit_reason = ConnectionClosureReason::Normal;
         let mut _exit_reason_reader = ConnectionClosureReason::Normal;
 
@@ -232,14 +231,12 @@ impl NodeWorker {
         }
 
         // 3- Stop node_reader_handle
-        if !reader_joined {
-            // Abort the task otherwise socket_reader.next() is stuck, waiting for some data to read
-            debug!(
-                "node_worker.run_loop.cleanup.node_reader_handle.abort, node_id: {}",
-                self.node_id
-            );
-            node_reader_handle.abort();
-        }
+        // Abort the task otherwise socket_reader.next() is stuck, waiting for some data to read
+        debug!(
+            "node_worker.run_loop.cleanup.node_reader_handle.abort, node_id: {}",
+            self.node_id
+        );
+        node_reader_handle.abort();
 
         Ok(exit_reason)
     }
