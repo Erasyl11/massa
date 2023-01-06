@@ -71,10 +71,6 @@ impl EventSender {
     pub fn clone_node_sender(&self) -> Sender<NodeEvent> {
         self.node_event_tx.clone()
     }
-
-    pub fn drop(self) {
-        drop(self.node_event_tx)
-    }
 }
 
 pub mod event_impl {
