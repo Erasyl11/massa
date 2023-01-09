@@ -19,11 +19,7 @@ use std::{
     collections::{HashMap, VecDeque},
     net::IpAddr,
 };
-use tokio::sync::{
-    mpsc::{self, error::TrySendError},
-    oneshot,
-};
-use tracing::{info, warn};
+use tracing::info;
 
 /// Network command sender
 #[derive(Clone)]
@@ -257,7 +253,7 @@ impl NetworkEventReceiver {
 
     /// drains remaining events and returns them in a `VecDeque`
     /// note: events are sorted from oldest to newest
-    pub fn drain(mut self) -> VecDeque<NetworkEvent> {
+    pub fn drain(self) -> VecDeque<NetworkEvent> {
         let mut remaining_events: VecDeque<NetworkEvent> = VecDeque::new();
         while let Ok(evt) = self.0.recv() {
             remaining_events.push_back(evt);

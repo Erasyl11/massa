@@ -81,7 +81,6 @@ use massa_models::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, net::IpAddr};
-use tokio::sync::oneshot;
 
 /// network command
 #[derive(Clone, Debug)]
