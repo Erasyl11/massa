@@ -179,9 +179,9 @@ impl NodeWorker {
         })?;
 
         let (message_tx, message_rx) = bounded::<Message>(self.cfg.node_command_channel_size); // TODO: config
-        let node_reader_handle = self.runtime_handle.spawn(async move {
-            node_reader_handle(&mut socket_reader, self.node_id, message_tx).await
-        });
+        let node_reader_handle = self
+            .runtime_handle
+            .spawn(async move { node_reader_handle(&mut socket_reader, message_tx).await });
         tokio::pin!(node_reader_handle);
 
         let ask_peer_list_interval = tick(self.cfg.ask_peer_list_interval.to_duration());
@@ -357,7 +357,6 @@ fn node_writer_handle(
 // via 'node_event_tx' queue
 async fn node_reader_handle(
     socket_reader: &mut ReadBinder,
-    node_id: NodeId,
     message_chan: Sender<Message>,
 ) -> ConnectionClosureReason {
     let mut exit_reason = ConnectionClosureReason::Normal;
