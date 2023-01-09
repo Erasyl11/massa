@@ -3,7 +3,7 @@
 use crate::error::ProtocolError;
 use massa_logging::massa_trace;
 
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::Sender;
 use massa_models::prehash::{PreHashMap, PreHashSet};
 use massa_models::{
     block::{BlockId, WrappedHeader},
@@ -13,7 +13,7 @@ use massa_models::{
 use massa_network_exports::NetworkEventReceiver;
 use massa_storage::Storage;
 use serde::Serialize;
-use std::thread::{self, JoinHandle};
+use std::thread::JoinHandle;
 use tracing::info;
 
 /// block result: map block id to

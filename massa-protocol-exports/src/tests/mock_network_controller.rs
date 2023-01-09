@@ -1,6 +1,6 @@
 // Copyright (c) 2022 MASSA LABS <info@massa.net>
 
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::{after, bounded, select, Receiver, Sender};
 use massa_models::{
     block::{BlockId, WrappedHeader},
     endorsement::WrappedEndorsement,
@@ -10,12 +10,8 @@ use massa_models::{
     node::NodeId,
     operation::{OperationId, WrappedOperation},
 };
-use massa_network_exports::{
-    AskForBlocksInfo, BlockInfoReply, NetworkCommand, NetworkCommandSender, NetworkEvent,
-    NetworkEventReceiver,
-};
+use massa_network_exports::{AskForBlocksInfo, BlockInfoReply, NetworkCommand, NetworkEvent};
 use massa_time::MassaTime;
-use tokio::{sync::mpsc, time::sleep};
 
 /// mock network controller
 pub struct MockNetworkController {
