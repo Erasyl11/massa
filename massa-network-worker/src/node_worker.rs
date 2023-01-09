@@ -180,13 +180,7 @@ impl NodeWorker {
 
         let (message_tx, message_rx) = bounded::<Message>(self.cfg.node_command_channel_size); // TODO: config
         let node_reader_handle = self.runtime_handle.spawn(async move {
-            node_reader_handle(
-                &mut socket_reader,
-                self.node_id,
-                self.cfg.max_send_wait_node_event,
-                message_tx,
-            )
-            .await
+            node_reader_handle(&mut socket_reader, self.node_id, message_tx).await
         });
         tokio::pin!(node_reader_handle);
 
@@ -364,7 +358,6 @@ fn node_writer_handle(
 async fn node_reader_handle(
     socket_reader: &mut ReadBinder,
     node_id: NodeId,
-    max_send_wait: MassaTime,
     message_chan: Sender<Message>,
 ) -> ConnectionClosureReason {
     let mut exit_reason = ConnectionClosureReason::Normal;
