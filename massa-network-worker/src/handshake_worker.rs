@@ -8,10 +8,9 @@ use super::{
     binders::{ReadBinder, WriteBinder},
     messages::Message,
 };
-use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::{bounded, Sender};
 use futures::future::try_join;
 use massa_hash::Hash;
-use massa_logging::massa_trace;
 use massa_models::{
     config::{
         constants::{MAX_DATASTORE_VALUE_LENGTH, MAX_FUNCTION_NAME_LENGTH, MAX_PARAMETERS_SIZE},
@@ -34,8 +33,7 @@ use massa_time::MassaTime;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use std::thread::{self, JoinHandle};
 use tokio::runtime::Handle;
-use tokio::{task::JoinHandle as AsyncJoinHandle, time::timeout};
-use tracing::debug;
+use tokio::time::timeout;
 
 /// Type alias for more readability
 pub type HandshakeReturnType = Result<(NodeId, ReadBinder, WriteBinder), NetworkError>;

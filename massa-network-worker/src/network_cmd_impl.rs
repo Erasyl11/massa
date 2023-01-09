@@ -20,7 +20,7 @@
 //!         ...
 //! ```
 use crate::network_worker::NetworkWorker;
-use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::Sender;
 use massa_hash::Hash;
 use massa_logging::massa_trace;
 use massa_models::{
@@ -39,7 +39,6 @@ use std::{
     collections::{HashMap, HashSet},
     net::IpAddr,
 };
-use tokio::sync::oneshot;
 use tracing::warn;
 
 /// Remove the `ids` from the `worker`

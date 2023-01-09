@@ -10,7 +10,7 @@ use crate::{
     messages::{Message, MessageDeserializer},
     network_event::EventSender,
 };
-use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::{bounded, select, Receiver, Sender};
 use futures::{stream::FuturesUnordered, StreamExt};
 use massa_logging::massa_trace;
 use massa_models::{node::NodeId, version::Version};
@@ -26,9 +26,8 @@ use std::{
     net::{IpAddr, SocketAddr},
 };
 use tokio::runtime::{Handle, Runtime};
-use tokio::sync::mpsc;
 use tokio::task::JoinHandle as AsyncJoinHandle;
-use tracing::{debug, trace, warn};
+use tracing::debug;
 
 /// Real job is done by network worker
 pub struct NetworkWorker {

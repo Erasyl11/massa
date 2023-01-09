@@ -1,9 +1,8 @@
-use crossbeam_channel::{bounded, select, tick, Receiver, SendTimeoutError, Sender};
+use crossbeam_channel::{SendTimeoutError, Sender};
 use massa_models::node::NodeId;
 use massa_network_exports::{ConnectionId, NetworkError, NetworkEvent, NodeCommand, NodeEvent};
 use std::thread::JoinHandle;
 use std::time::Duration;
-use tokio::sync::mpsc;
 use tracing::debug;
 
 pub struct EventSender {

@@ -11,7 +11,7 @@ use crate::{
     network_worker::{NetworkWorker, NetworkWorkerChannels},
     peer_info_database::PeerInfoDatabase,
 };
-use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::bounded;
 use massa_logging::massa_trace;
 use massa_models::{node::NodeId, version::Version};
 use massa_network_exports::{
@@ -21,7 +21,6 @@ use massa_network_exports::{
 use massa_signature::KeyPair;
 use std::thread;
 use tokio::runtime::Runtime;
-use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
 //pub use establisher::Establisher;
