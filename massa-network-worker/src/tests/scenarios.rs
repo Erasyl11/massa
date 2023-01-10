@@ -129,7 +129,8 @@ async fn test_node_worker_shutdown() {
         .send(NodeCommand::Close(ConnectionClosureReason::Normal))
         .unwrap();
 
-    node_result_rx.recv().unwrap();
+    let (_, res) = node_result_rx.recv().unwrap();
+    res.unwrap();
     node_fn_handle.join().unwrap();
 }
 
@@ -201,7 +202,8 @@ async fn test_node_worker_operations_message() {
 
     // TODO: add some infra to receive the message via the duplex mock, and assert it is what is expected.
 
-    node_result_rx.recv().unwrap();
+    let (_, res) = node_result_rx.recv().unwrap();
+    res.unwrap();
     node_fn_handle.join().unwrap();
 }
 
