@@ -1,5 +1,5 @@
 use crate::start_protocol_controller;
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::bounded;
 use futures::Future;
 use massa_consensus_exports::test_exports::{ConsensusEventReceiver, MockConsensusController};
 use massa_models::{
@@ -15,7 +15,6 @@ use massa_protocol_exports::{
     ProtocolManager,
 };
 use massa_storage::Storage;
-use tokio::sync::mpsc;
 
 pub async fn protocol_test<F, V>(protocol_config: &ProtocolConfig, test: F)
 where

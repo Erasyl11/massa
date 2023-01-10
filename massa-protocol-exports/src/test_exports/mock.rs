@@ -1,10 +1,9 @@
 // Copyright (c) 2022 MASSA LABS <info@massa.net>
 
 use crate::{ProtocolCommand, ProtocolCommandSender};
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::{after, bounded, select, Receiver};
 use massa_models::block::BlockId;
 use massa_time::MassaTime;
-use tokio::{sync::mpsc, time::sleep};
 
 /// Mock of the protocol
 /// TODO: Improve doc

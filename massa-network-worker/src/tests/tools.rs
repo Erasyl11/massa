@@ -9,7 +9,7 @@ use crate::NetworkConfig;
 use crate::NetworkError;
 use crate::NetworkEvent;
 
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::{after, select};
 use massa_hash::Hash;
 use massa_models::node::NodeId;
 use massa_models::wrapped::WrappedContent;
@@ -33,7 +33,6 @@ use std::{
     time::Duration,
 };
 use tempfile::NamedTempFile;
-use tokio::time::sleep;
 use tokio::{sync::oneshot, task::JoinHandle, time::timeout};
 use tracing::trace;
 

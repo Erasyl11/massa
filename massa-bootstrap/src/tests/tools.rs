@@ -3,7 +3,7 @@
 use super::mock_establisher::Duplex;
 use crate::settings::BootstrapConfig;
 use bitvec::vec::BitVec;
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::{after, select, Receiver};
 use massa_async_pool::test_exports::{create_async_pool, get_random_message};
 use massa_async_pool::{AsyncPoolChanges, Change};
 use massa_consensus_exports::{
@@ -56,7 +56,6 @@ use std::{
 };
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
-use tokio::time::sleep;
 
 pub const BASE_BOOTSTRAP_IP: IpAddr = IpAddr::V4(Ipv4Addr::new(169, 202, 0, 10));
 

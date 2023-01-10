@@ -11,7 +11,7 @@ use crate::{
     binders::{ReadBinder, WriteBinder},
     NetworkConfig,
 };
-use crossbeam_channel::{bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::bounded;
 use enum_map::enum_map;
 use enum_map::EnumMap;
 use massa_hash::Hash;
@@ -44,7 +44,6 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::Handle;
-use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tracing::trace;
 

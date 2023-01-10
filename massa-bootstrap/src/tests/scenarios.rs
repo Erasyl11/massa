@@ -15,7 +15,7 @@ use crate::{
     get_state, start_bootstrap_server,
     tests::tools::{assert_eq_bootstrap_graph, get_bootstrap_config},
 };
-use crossbeam_channel::{after, bounded, select, tick, Receiver, Sender};
+use crossbeam_channel::bounded;
 use massa_async_pool::AsyncPoolConfig;
 use massa_consensus_exports::{
     bootstrapable_graph::BootstrapableGraph,
@@ -45,7 +45,6 @@ use parking_lot::RwLock;
 use serial_test::serial;
 use std::{path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 use tempfile::TempDir;
-use tokio::sync::mpsc;
 
 lazy_static::lazy_static! {
     pub static ref BOOTSTRAP_CONFIG_KEYPAIR: (BootstrapConfig, KeyPair) = {
