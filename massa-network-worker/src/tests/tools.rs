@@ -21,9 +21,7 @@ use massa_models::{
     version::Version,
 };
 use massa_network_exports::test_exports::mock_establisher::{self, MockEstablisherInterface};
-use massa_network_exports::{
-    ConnectionId, NetworkCommandSender, NetworkEventReceiver, NetworkManager, PeerInfo,
-};
+use massa_network_exports::{NetworkCommandSender, NetworkEventReceiver, NetworkManager, PeerInfo};
 use massa_signature::KeyPair;
 use massa_time::MassaTime;
 use std::str::FromStr;
@@ -70,7 +68,6 @@ pub async fn full_connection_to_controller(
     connect_timeout_ms: u64,
     event_timeout_ms: u64,
     rw_timeout_ms: u64,
-    connection_id: ConnectionId,
 ) -> (NodeId, ReadBinder, WriteBinder) {
     // establish connection towards controller
     let (mock_read_half, mock_write_half) = timeout(
@@ -127,7 +124,6 @@ pub async fn rejected_connection_to_controller(
     connect_timeout_ms: u64,
     event_timeout_ms: u64,
     rw_timeout_ms: u64,
-    connection_id: ConnectionId,
 ) -> NetworkError {
     // establish connection towards controller
     let (mock_read_half, mock_write_half) = timeout(
@@ -208,7 +204,6 @@ pub async fn full_connection_from_controller(
     connect_timeout_ms: u64,
     event_timeout_ms: u64,
     rw_timeout_ms: u64,
-    connection_id: ConnectionId,
 ) -> (NodeId, ReadBinder, WriteBinder) {
     // wait for the incoming connection attempt, check address and accept
     let (mock_read_half, mock_write_half, ctl_addr, resp_tx) = timeout(

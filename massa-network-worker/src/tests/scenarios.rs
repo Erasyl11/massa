@@ -31,8 +31,8 @@ use massa_models::{
 };
 use massa_network_exports::{settings::PeerTypeConnectionConfig, NodeCommand, NodeEvent};
 use massa_network_exports::{
-    AskForBlocksInfo, BlockInfoReply, ConnectionClosureReason, ConnectionId, HandshakeErrorType,
-    PeerInfo, PeerType,
+    AskForBlocksInfo, BlockInfoReply, ConnectionClosureReason, HandshakeErrorType, PeerInfo,
+    PeerType,
 };
 use massa_signature::KeyPair;
 use massa_time::MassaTime;
@@ -250,7 +250,6 @@ async fn test_multiple_connections_to_controller() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(0),
             )
             .await;
             let conn1_drain = tools::incoming_message_drain_start(conn1_r).await; // drained l110
@@ -263,7 +262,6 @@ async fn test_multiple_connections_to_controller() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(3),
             )
             .await;
             assert_ne!(
@@ -280,7 +278,6 @@ async fn test_multiple_connections_to_controller() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(2),
             )
             .await;
 
@@ -302,7 +299,6 @@ async fn test_multiple_connections_to_controller() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(3),
             )
             .await;
             (
@@ -362,7 +358,6 @@ async fn test_peer_ban() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(0),
             )
             .await;
             let conn1_drain = tools::incoming_message_drain_start(conn1_r).await;
@@ -377,7 +372,6 @@ async fn test_peer_ban() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(1),
             )
             .await;
             let conn2_drain = tools::incoming_message_drain_start(conn2_r).await;
@@ -412,7 +406,6 @@ async fn test_peer_ban() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(2),
             )
             .await;
 
@@ -432,7 +425,6 @@ async fn test_peer_ban() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(3),
             )
             .await;
             let conn1_drain_bis = tools::incoming_message_drain_start(conn1_r).await;
@@ -495,7 +487,6 @@ async fn test_peer_ban_by_ip() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(0),
             )
             .await;
             let conn1_drain = tools::incoming_message_drain_start(conn1_r).await;
@@ -510,7 +501,6 @@ async fn test_peer_ban_by_ip() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(1),
             )
             .await;
             let conn2_drain = tools::incoming_message_drain_start(conn2_r).await;
@@ -545,7 +535,6 @@ async fn test_peer_ban_by_ip() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(2),
             )
             .await;
 
@@ -565,7 +554,6 @@ async fn test_peer_ban_by_ip() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(3),
             )
             .await;
             let conn1_drain_bis = tools::incoming_message_drain_start(conn1_r).await;
@@ -637,7 +625,6 @@ async fn test_advertised_and_wakeup_interval() {
                     1_000u64,
                     1_000u64,
                     1_000u64,
-                    ConnectionId(0),
                 )
                 .await;
                 tools::advertise_peers_in_connection(&mut conn2_w, vec![mock_addr.ip()]).await;
@@ -689,7 +676,6 @@ async fn test_advertised_and_wakeup_interval() {
                         .unwrap(),
                     1_000u64,
                     1_000u64,
-                    ConnectionId(1),
                 )
                 .await;
                 if start_instant.elapsed() < network_conf.wakeup_interval.to_duration() {
@@ -771,7 +757,6 @@ async fn test_block_not_found() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(0),
             )
             .await;
             // let conn1_drain= tools::incoming_message_drain_start(conn1_r).await;
@@ -949,7 +934,6 @@ async fn test_retry_connection_closed() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(0),
             )
             .await;
 
@@ -1048,7 +1032,6 @@ async fn test_operation_messages() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(0),
             )
             .await;
             // let conn1_drain= tools::incoming_message_drain_start(conn1_r).await;
@@ -1162,7 +1145,6 @@ async fn test_endorsements_messages() {
                 1_000u64,
                 1_000u64,
                 1_000u64,
-                ConnectionId(0),
             )
             .await;
             // let conn1_drain= tools::incoming_message_drain_start(conn1_r).await;
