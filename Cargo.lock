@@ -2492,7 +2492,6 @@ version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
  "displaydoc",
- "futures",
  "lazy_static",
  "massa_hash",
  "massa_logging",

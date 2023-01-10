@@ -15,7 +15,6 @@ serde_json = "1.0"
 thiserror = "1.0"
 tokio = { version = "1.21", features = ["full"] }
 tracing = "0.1"
-futures = {version = "0.3", optional = true }
 
 # custom modules
 massa_hash = { path = "../massa-hash" }
@@ -29,4 +28,4 @@ massa_storage = { path = "../massa-storage" }
 # for more information on what are the following features used for, see the cargo.toml at workspace level
 [features]
 sandbox = ["massa_models/sandbox"]
-testing = ["futures"]
+testing = []
