@@ -53,7 +53,7 @@ lazy_static::lazy_static! {
     };
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[serial]
 async fn test_bootstrap_server() {
     let thread_count = 2;
