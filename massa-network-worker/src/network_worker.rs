@@ -367,7 +367,8 @@ impl NetworkWorker {
         // Abort the listener task
         listener_handle.abort();
 
-        // Join on the handshake manager thread.
+        // Drop the sole sender to, and join on, the handshake manager thread.
+        drop(self.handshake_tx);
         self.handshake_join_handle
             .join()
             .expect("Failed to join on the handshake manager thread at shutdown.");
