@@ -378,6 +378,7 @@ impl NetworkWorker {
             node_command_tx
                 .send(NodeCommand::Close(ConnectionClosureReason::Normal))
                 .expect("Failed to send close command to node worker.");
+            let _ = self.node_result_rx.recv();
             handle
                 .join()
                 .expect("Failed to join on a node worker thread at shutdown.");
