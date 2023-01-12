@@ -136,7 +136,7 @@ async fn test_node_worker_shutdown() {
 }
 
 /// Test that a node worker can send an operations message.
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[serial]
 async fn test_node_worker_operations_message() {
     let bind_port: u16 = 50_000;
@@ -178,6 +178,7 @@ async fn test_node_worker_operations_message() {
 
     let (node_result_tx, node_result_rx) =
         bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
+    let handle = Handle::current().clone();
     let node_fn_handle = thread::spawn(move || {
         let res = NodeWorker::new(
             network_conf,
@@ -186,7 +187,7 @@ async fn test_node_worker_operations_message() {
             writer,
             node_command_rx,
             node_event_tx,
-            Handle::current().clone(),
+            handle,
         )
         .run_loop();
         node_result_tx
