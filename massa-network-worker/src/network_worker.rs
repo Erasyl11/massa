@@ -785,7 +785,7 @@ impl NetworkWorker {
             let sender_clone = self.handshake_peer_list_tx.clone();
             let ip = remote_addr.ip();
             self.handshake_peer_list_futures
-                .insert(remote_addr.ip(), tokio::spawn(async move {
+                .insert(remote_addr.ip(), self.runtime.spawn(async move {
                     let mut writer = WriteBinder::new(writer, max_bytes_read, max_message_size);
                     let mut reader = ReadBinder::new(
                         reader,
