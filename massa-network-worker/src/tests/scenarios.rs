@@ -108,6 +108,7 @@ async fn test_node_worker_shutdown() {
 
     let (node_result_tx, node_result_rx) =
         bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
+    let handle = Handle::current().clone();
     let node_fn_handle = thread::spawn(move || {
         let res = NodeWorker::new(
             network_conf,
@@ -116,7 +117,7 @@ async fn test_node_worker_shutdown() {
             writer,
             node_command_rx,
             node_event_tx,
-            Handle::current().clone(),
+            handle,
         )
         .run_loop();
         node_result_tx
