@@ -287,10 +287,8 @@ impl ProtocolWorker {
                     self.prune_asked_operations()?;
                 }
             }
-            massa_trace!("protocol.protocol_worker.run_loop.end", {});
-            break;
         }
-
+        massa_trace!("protocol.protocol_worker.run_loop.end", {});
         Ok(self.network_event_receiver)
     }
 
