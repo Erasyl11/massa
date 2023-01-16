@@ -303,11 +303,11 @@ async fn test_protocol_propagates_operations_received_over_the_network_only_to_n
             network_controller
                 .send_operations(nodes[0].id, vec![operation.clone()])
                 .await;
-            pool_event_receiver.wait_command(1000.into(), |evt| match evt {
+            pool_event_receiver.wait_command(000.into(), |evt| match evt {
                 MockPoolControllerMessage::AddOperations { .. } => {
-                    panic!("Unexpected or no protocol event.")
+                    Some(MockPoolControllerMessage::Any)
                 }
-                _ => Some(MockPoolControllerMessage::Any),
+                _ => panic!("Unexpected or no protocol event."),
             });
 
             let expected_operation_id = operation.id;
