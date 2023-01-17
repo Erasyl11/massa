@@ -367,9 +367,9 @@ async fn test_protocol_batches_propagation_of_operations_received_over_the_netwo
                 .await;
             pool_event_receiver.wait_command(1000.into(), |evt| match evt {
                 MockPoolControllerMessage::AddOperations { .. } => {
-                    panic!("Unexpected or no protocol event.")
+                    Some(MockPoolControllerMessage::Any)
                 }
-                _ => Some(MockPoolControllerMessage::Any),
+                _ => panic!("Unexpected or no protocol event."),
             });
 
             let expected_operation_id_1 = operation.id;
