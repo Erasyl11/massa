@@ -227,9 +227,9 @@ async fn test_protocol_propagates_operations_only_to_nodes_that_dont_know_about_
                 .await;
             pool_event_receiver.wait_command(1000.into(), |evt| match evt {
                 MockPoolControllerMessage::AddOperations { .. } => {
-                    panic!("Unexpected or no protocol event.")
+                    Some(MockPoolControllerMessage::Any)
                 }
-                _ => Some(MockPoolControllerMessage::Any),
+                _ => panic!("Unexpected or no protocol event."),
             });
             // create and connect a node that does not know about the endorsement
             let new_nodes = tools::create_and_connect_nodes(1, &mut network_controller).await;
