@@ -221,6 +221,8 @@ pub const NETWORK_NODE_EVENT_CHANNEL_SIZE: usize = 10_000;
 pub const HANDSHAKE_MANAGER_CHANNEL_SIZE: usize = 10_000;
 /// Node result channel size
 pub const NODE_RESULT_CHANNEL_SIZE: usize = 10_000;
+/// Handshake peer list chanel size
+pub const HANDSHAKE_PEER_LIST_CHANNEL_SIZE: usize = 10_000;
 
 // Some checks at compile time that should not be ignored!
 #[allow(clippy::assertions_on_constants)]

@@ -118,8 +118,8 @@ impl NetworkWorker {
             Result<ConnectionClosureReason, NetworkError>,
         )>(cfg.node_result_channel_size);
 
-        // TODO: config size.
-        let (handshake_peer_list_tx, handshake_peer_list_rx) = bounded::<IpAddr>(1);
+        let (handshake_peer_list_tx, handshake_peer_list_rx) =
+            bounded::<IpAddr>(cfg.handshake_peer_list_channel_size);
 
         let (node_event_tx, node_event_rx) = bounded::<NodeEvent>(cfg.node_event_channel_size);
         let max_wait_event = cfg.max_send_wait_network_event.to_duration();

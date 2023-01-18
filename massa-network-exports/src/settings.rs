@@ -96,6 +96,8 @@ pub struct NetworkConfig {
     pub handshake_manager_channel_size: usize,
     /// Node result channel size
     pub node_result_channel_size: usize,
+    /// Handshake peer list chanel size
+    pub handshake_peer_list_channel_size: usize,
 }
 
 /// Connection configuration for a peer type
@@ -117,13 +119,14 @@ pub mod tests {
     use crate::{test_exports::tools::get_temp_keypair_file, PeerType};
     use enum_map::enum_map;
     use massa_models::config::{
-        ENDORSEMENT_COUNT, HANDSHAKE_MANAGER_CHANNEL_SIZE, MAX_ADVERTISE_LENGTH,
-        MAX_ASK_BLOCKS_PER_MESSAGE, MAX_DATASTORE_VALUE_LENGTH, MAX_ENDORSEMENTS_PER_MESSAGE,
-        MAX_FUNCTION_NAME_LENGTH, MAX_MESSAGE_SIZE, MAX_OPERATIONS_PER_MESSAGE,
-        MAX_OPERATION_DATASTORE_ENTRY_COUNT, MAX_OPERATION_DATASTORE_KEY_LENGTH,
-        MAX_OPERATION_DATASTORE_VALUE_LENGTH, MAX_PARAMETERS_SIZE, NETWORK_CONTROLLER_CHANNEL_SIZE,
-        NETWORK_EVENT_CHANNEL_SIZE, NETWORK_NODE_COMMAND_CHANNEL_SIZE,
-        NETWORK_NODE_EVENT_CHANNEL_SIZE, NODE_RESULT_CHANNEL_SIZE, THREAD_COUNT,
+        ENDORSEMENT_COUNT, HANDSHAKE_MANAGER_CHANNEL_SIZE, HANDSHAKE_PEER_LIST_CHANNEL_SIZE,
+        MAX_ADVERTISE_LENGTH, MAX_ASK_BLOCKS_PER_MESSAGE, MAX_DATASTORE_VALUE_LENGTH,
+        MAX_ENDORSEMENTS_PER_MESSAGE, MAX_FUNCTION_NAME_LENGTH, MAX_MESSAGE_SIZE,
+        MAX_OPERATIONS_PER_MESSAGE, MAX_OPERATION_DATASTORE_ENTRY_COUNT,
+        MAX_OPERATION_DATASTORE_KEY_LENGTH, MAX_OPERATION_DATASTORE_VALUE_LENGTH,
+        MAX_PARAMETERS_SIZE, NETWORK_CONTROLLER_CHANNEL_SIZE, NETWORK_EVENT_CHANNEL_SIZE,
+        NETWORK_NODE_COMMAND_CHANNEL_SIZE, NETWORK_NODE_EVENT_CHANNEL_SIZE,
+        NODE_RESULT_CHANNEL_SIZE, THREAD_COUNT,
     };
     use massa_time::MassaTime;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -192,6 +195,7 @@ pub mod tests {
                 node_event_channel_size: NETWORK_NODE_EVENT_CHANNEL_SIZE,
                 handshake_manager_channel_size: HANDSHAKE_MANAGER_CHANNEL_SIZE,
                 node_result_channel_size: NODE_RESULT_CHANNEL_SIZE,
+                handshake_peer_list_channel_size: HANDSHAKE_PEER_LIST_CHANNEL_SIZE,
             }
         }
     }
@@ -261,6 +265,7 @@ pub mod tests {
                 node_event_channel_size: NETWORK_NODE_EVENT_CHANNEL_SIZE,
                 handshake_manager_channel_size: HANDSHAKE_MANAGER_CHANNEL_SIZE,
                 node_result_channel_size: NODE_RESULT_CHANNEL_SIZE,
+                handshake_peer_list_channel_size: HANDSHAKE_PEER_LIST_CHANNEL_SIZE,
             }
         }
     }
