@@ -113,9 +113,10 @@ impl NetworkWorker {
         let (handshake_tx, handshake_join_handle) =
             start_handshake_manager(conn_tx, runtime.handle().clone());
 
-        // TODO: config size.
-        let (node_result_tx, node_result_rx) =
-            bounded::<(NodeId, Result<ConnectionClosureReason, NetworkError>)>(1);
+        let (node_result_tx, node_result_rx) = bounded::<(
+            NodeId,
+            Result<ConnectionClosureReason, NetworkError>,
+        )>(cfg.node_result_channel_size);
 
         // TODO: config size.
         let (handshake_peer_list_tx, handshake_peer_list_rx) = bounded::<IpAddr>(1);
