@@ -108,8 +108,8 @@ impl NetworkWorker {
     ) -> NetworkWorker {
         let self_node_id = NodeId(keypair.get_public_key());
 
-        // TODO: config size.
-        let (conn_tx, connections_rx) = bounded::<(ConnectionId, HandshakeReturnType)>(1);
+        let (conn_tx, connections_rx) =
+            bounded::<(ConnectionId, HandshakeReturnType)>(cfg.handshake_manager_channel_size);
         let (handshake_tx, handshake_join_handle) =
             start_handshake_manager(conn_tx, runtime.handle().clone());
 
