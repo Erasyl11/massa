@@ -1,0 +1,250 @@
+syntax = "proto3";
+
+package grpc.massa.protobuf;
+
+import "google/protobuf/empty.proto";
+
+service Massa {
+
+  rpc GetVersion ( google.protobuf.Empty ) returns ( Version ) {}
+
+  rpc SendBlocks ( stream SendBlocksRequest ) returns ( stream BlockId ) {}
+
+  rpc SendEndorsements ( stream SendEndorsementsRequest ) returns ( stream EndorsementId ) {}
+
+  rpc SendOperations ( stream SendOperationsRequest ) returns ( stream OperationId ) {}
+
+}
+
+//SendEndorsementsRequest holds parameters to SendEndorsements
+message SendEndorsementsRequest {
+  Endorsement endorsements = 1;
+}
+
+//SendBlocksRequest holds parameters to SendBlocks
+message SendBlocksRequest {
+  Block block = 1;
+}
+
+//SendOperationsRequest holds parameters to SendOperations
+message SendOperationsRequest {
+  OperationInput operation = 1;
+}
+
+// region Block
+    message Block {
+      BlockHeader header = 1;
+    
+      repeated OperationInfo operations = 2;
+    }
+    
+    message BlockId {
+     string value = 1;
+    }
+    
+    message BlockInfo {
+      string id = 1;
+
+      BlockInfoContent content = 2;
+    }
+    
+    message BlockInfoContent {
+      bool is_final = 1;
+    
+      bool is_stale = 2;
+    
+      bool is_in_blockclique = 3;
+    
+      Block block = 4;
+    }
+    
+    message BlockHeader {
+      string creator = 1;
+    
+      string operation_merkle_root = 2;
+    
+      repeated string parents = 3;
+
+      Slot slot = 4;
+    }
+
+    message WrappedBlockHeader {
+      BlockHeader content = 1;
+
+      Signature signature = 2;
+
+      PubKey creator_public_key = 3;
+
+      Address creator_address = 4;
+    }
+    
+    message WrappedBlock {
+      Block content = 1;
+
+      Signature signature = 2;
+
+      PubKey creator_public_key = 3;
+
+      Address creator_address = 4;
+    }
+
+    message Address {
+      string value = 1;
+    }
+
+// region Endorsement
+    message EndorsementInfo {
+      string id = 1;
+    
+      bool in_pool = 2;
+    
+      repeated string in_blocks = 3;
+    
+      bool is_final = 4;
+    
+      Endorsement endorsement = 5;
+    }
+    
+    message Endorsement {
+      EndorsementContent content = 1;
+    
+      string signature = 2;
+    }
+    
+    message EndorsementContent {
+      string sender_public_key = 1;
+    
+      Slot slot = 2;
+    
+      float index = 3;
+    
+      string endorsed_block = 4;
+    }
+    
+    message EndorsementId {
+      string value = 1;
+    }
+
+// region Operation
+    message OperationInfo {
+      string id = 1;
+
+      repeated string in_blocks = 2;
+    
+      bool in_pool = 3;
+    
+      bool is_final = 4;
+    
+      WrappedOperation operation = 5;
+    }
+    
+    message Roll {
+      int64 roll_count = 1;
+    }
+    
+    message Slot {
+      float period = 1;
+   
+      float thread = 2;
+    }
+    
+    message OperationId {
+      string value = 1;
+    }
+    
+    message OperationType {
+      Transaction transaction = 1;
+    
+      ExecuteSC execut_sc = 2;
+    
+      CallSC call_sc = 3;
+    
+      RollBuy roll_buy = 4;
+    
+      RollSell roll_sell = 5;
+    }
+    
+    message Transaction {
+      string amount = 1;
+    
+      string recipient_address = 2;
+    }
+    
+    message CallSC {
+      string target_addr = 1;
+      
+      string target_func = 2;
+      
+      string param = 3;
+      
+      float max_gas = 4;
+      
+      float sequential_coins = 5;
+      
+      float parallel_coins = 6;
+      
+      float gas_price = 7;
+    }
+    
+    message ExecuteSC {
+      repeated float data = 1;
+    
+      float max_gas = 2;
+    
+      string coins = 3;
+    
+      string gas_price = 4;
+    }
+    
+    message RollBuy {
+      float roll_count = 1;
+    }
+    
+    message RollSell {
+      float roll_count = 1;
+    }
+    
+    message Signature {
+      string value = 1;
+    }
+    
+    message PubKey {
+      string value = 1;
+    }
+    
+    message OperationInput {
+      string creator_public_key = 1;
+
+      Signature signature = 2;
+
+      repeated string serialized_content = 3;
+    }
+    
+    message WrappedOperation {
+      OperationType content = 1;
+
+      Signature signature = 2;
+
+      PubKey creator_public_key = 3;
+
+      Address creator_address = 4;
+    }
+    
+    message WrappedEndorsement {
+      Endorsement content = 1;
+    
+      Signature signature = 2;
+    
+      PubKey creator_public_key = 3;
+    
+      Address creator_address = 4;
+    }
+
+// common
+    message MassaTime {
+      int64 value = 1;
+    }
+    
+    message Version {
+      string version = 1;
+    }

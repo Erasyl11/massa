@@ -1,0 +1,773 @@
+syntax = "proto3";
+
+package openapi;
+
+import "google/api/annotations.proto";
+
+import "google/protobuf/descriptor.proto";
+
+import "google/protobuf/empty.proto";
+
+message ExecuteReadOnlyResponse {
+  ExecutedAt executed_at = 1;
+
+  string result = 2;
+
+  repeated OutputEvent output_events = 3;
+}
+
+message ExecutedAt {
+  float period = 1;
+
+  float thread = 2;
+}
+
+message OutputEvent {
+  EventId id1 = 1;
+}
+
+message SCOEContext {
+  ExecutedAt slot = 1;
+
+  string block = 2;
+
+  bool read_only = 3;
+
+  repeated string call_stack = 4;
+
+  float index_in_slot = 5;
+
+  string origin_operation_id = 6;
+}
+
+message ReadOnlyCall {
+  float max_gas = 1;
+
+  float simulated_gas_price = 2;
+
+  string target_address = 3;
+
+  string target_function = 4;
+
+  string parameter = 5;
+
+  AddressInfo caller_address = 6;
+}
+
+message SCOutputEvent {
+  string data = 1;
+
+  string id = 2;
+
+  SCContext context = 3;
+}
+
+message EventFilter {
+  Slot start = 1;
+
+  Slot end = 2;
+
+  AddressInfo emitter_address = 3;
+
+  AddressInfo original_caller_address = 4;
+
+  string original_operation_id = 5;
+}
+
+message Balance {
+  string candidate_balance = 1;
+
+  string final_balance = 2;
+
+  string locked_balance = 3;
+}
+
+message BlockDraw {
+  float period = 1;
+
+  float thread = 2;
+}
+
+message EndorsementDraw {
+  BlockDraw slot = 1;
+
+  int64 index = 2;
+}
+
+message ProductionStat {
+  int64 cycle = 1;
+
+  bool is_final = 2;
+
+  int64 nok_count = 3;
+
+  int64 ok_count = 4;
+}
+
+message GraphInterval {
+  string creator = 1;
+
+  string id = 2;
+
+  bool is_final = 3;
+
+  bool is_in_blockclique = 4;
+
+  bool is_stale = 5;
+
+  repeated string parents = 6;
+
+  Slot slot = 7;
+}
+
+message BlockInfo {
+  string id = 1;
+
+  BlockInfoContent content = 2;
+}
+
+message BlockInfoContent {
+  bool is_final = 1;
+
+  bool is_stale = 2;
+
+  bool is_in_blockclique = 3;
+
+  Block block = 4;
+}
+
+message Block {
+  Header header = 1;
+
+  repeated OperationInfo operations = 2;
+}
+
+message Header {
+  string creator = 1;
+
+  string operation_merkle_root = 2;
+
+  repeated string parents = 3;
+
+  Slot slot = 4;
+}
+
+message EndorsementInfo {
+  string id = 1;
+
+  bool in_pool = 2;
+
+  repeated string in_blocks = 3;
+
+  bool is_final = 4;
+
+  Endorsement endorsement = 5;
+}
+
+message Endorsement {
+  EndorsementContent content = 1;
+
+  string signature = 2;
+}
+
+message OperationInfo {
+  string id = 1;
+
+  repeated string in_blocks = 2;
+
+  bool in_pool = 3;
+
+  bool is_final = 4;
+
+  WrappedOperation operation = 5;
+}
+
+message CallSC {
+  string target_addr = 1;
+
+  string target_func = 2;
+
+  string param = 3;
+
+  float max_gas = 4;
+
+  float sequential_coins = 5;
+
+  float parallel_coins = 6;
+
+  float gas_price = 7;
+}
+
+message ExecuteSC {
+  repeated float data = 1;
+
+  float max_gas = 2;
+
+  string coins = 3;
+
+  string gas_price = 4;
+}
+
+message Roll {
+  int64 roll_count = 1;
+}
+
+message Transaction {
+  string amount = 1;
+
+  string recipient_address = 2;
+}
+
+message NodeStatus {
+  CompactConfig config = 1;
+
+  ConnectedNodes connected_nodes = 2;
+
+  ConsensusStats consensus_stats = 3;
+
+  float current_cycle = 4;
+
+  MassaTime current_time = 5;
+
+  Slot last_slot = 6;
+
+  NetworkStats network_stats = 7;
+
+  Slot next_slot = 8;
+
+  string node_id = 9;
+
+  string node_ip = 10;
+
+  PoolStats pool_stats = 11;
+
+  Version version = 12;
+}
+
+message ConsensusStats {
+  float clique_count = 1;
+
+  float end_timespan = 2;
+
+  float final_block_count = 3;
+
+  float final_operation_count = 4;
+
+  float staker_count = 5;
+
+  float stale_block_count = 6;
+
+  string start_timespan = 7;
+}
+
+message NetworkStats {
+  float active_node_count = 1;
+
+  float banned_peer_count = 2;
+
+  float in_connection_count = 3;
+
+  float known_peer_count = 4;
+
+  float out_connection_count = 5;
+}
+
+message PoolStats {
+  float endorsement_count = 1;
+
+  float operation_count = 2;
+}
+
+message ConnectedNodesAdditionalProperties {
+  string node_id = 1;
+
+  string ip_address = 2;
+}
+
+message ConnectedNodes {
+  map<string, ConnectedNodesAdditionalProperties> additional_properties = 1;
+}
+
+message CompactConfig {
+  string block_reward = 1;
+
+  float delta_f0 = 2;
+
+  MassaTime end_timestamp = 3;
+
+  MassaTime genesis_timestamp = 4;
+
+  float operation_validity_periods = 5;
+
+  float periods_per_cycle = 6;
+
+  float pos_lock_cycles = 7;
+
+  float pos_lookback_cycles = 8;
+
+  string roll_price = 9;
+
+  MassaTime t0 = 10;
+
+  float thread_count = 11;
+}
+
+message Slot {
+  float period = 1;
+
+  float thread = 2;
+}
+
+message Clique {
+  repeated string block_ids = 1;
+
+  float fitness = 2;
+
+  bool is_blockclique = 3;
+}
+
+message StackersAdditionalProperties {
+  string address = 1;
+
+  float active_rolls = 2;
+}
+
+message Stackers {
+  map<string, StackersAdditionalProperties> additional_properties = 1;
+}
+
+message EndorsementContent {
+  string sender_public_key = 1;
+
+  Slot slot = 2;
+
+  float index = 3;
+
+  string endorsed_block = 4;
+}
+
+message DataStoreEntry {
+  string active_value = 1;
+
+  string final_value = 2;
+}
+
+message PubkeySig {
+  string public_key = 1;
+
+  string signature = 2;
+}
+
+message DataStoreAdditionalProperties {
+  string enrtry = 1;
+
+  repeated int64 bytes = 2;
+}
+
+message DataStore {
+  map<string, DataStoreAdditionalProperties> additional_properties = 1;
+}
+
+message SCContext {
+  Slot slot = 1;
+
+  string block = 2;
+
+  bool read_only = 3;
+
+  repeated string call_stack = 4;
+
+  int64 index_in_slot = 5;
+
+  string origin_operation_id = 6;
+}
+
+message EventIdAdditionalProperties {
+  string id = 1;
+
+  SCOEContext context = 2;
+
+  string data = 3;
+}
+
+message EventId {
+  map<string, EventIdAdditionalProperties> additional_properties = 1;
+}
+
+message MassaTime {
+}
+
+message Version {
+  float instance = 1;
+
+  float major = 2;
+
+  float minor = 3;
+}
+
+message RollsInfo {
+  int64 active_rolls = 1;
+
+  int64 candidate_rolls = 2;
+
+  int64 final_rolls = 3;
+}
+
+message AddressInfo {
+  Address address = 1;
+
+  repeated BlockDraw block_draws = 2;
+
+  repeated string blocks_created = 3;
+
+  repeated EndorsementDraw endorsement_draws = 4;
+
+  repeated string involved_in_endorsements = 5;
+
+  repeated string involved_in_operations = 6;
+
+  repeated ProductionStat production_stats = 7;
+
+  RollsInfo rolls = 8;
+
+  LedgerInfo ledger_info = 9;
+
+  float final_balance_info = 10;
+
+  float candidate_balance_info = 11;
+}
+
+message LedgerInfo {
+  string balance = 1;
+
+  repeated int64 module = 2;
+
+  repeated DataStore datastore = 3;
+}
+
+message DatastoreEntryInput {
+  string address = 1;
+
+  repeated string key = 2;
+}
+
+message DataStoreEntryOutput {
+  string active_value = 1;
+
+  string final_value = 2;
+}
+
+message OperationType {
+  Transaction transaction = 1;
+
+  ExecuteSC execut_sc = 2;
+
+  CallSC call_sc = 3;
+
+  RollBuy roll_buy = 4;
+
+  RollSell roll_sell = 5;
+}
+
+message RollBuy {
+  float roll_count = 1;
+}
+
+message RollSell {
+  float roll_count = 1;
+}
+
+message OperationId {
+  string value = 1;
+}
+
+message Signature {
+  string value = 1;
+}
+
+message PubKey {
+  string value = 1;
+}
+
+message OperationInput {
+  string creator_public_key = 1;
+
+  Signature signature = 2;
+
+  repeated string serialized_content = 3;
+}
+
+message WrappedOperation {
+  OperationType content = 1;
+
+  Signature signature = 2;
+
+  PubKey creator_public_key = 3;
+
+  Address creator_address = 4;
+}
+
+message WrappedHeader {
+  Header content = 1;
+
+  Signature signature = 2;
+
+  PubKey creator_public_key = 3;
+
+  Address creator_address = 4;
+}
+
+message CloneOfWrappedOperation {
+  OperationType content = 1;
+
+  Signature signature = 2;
+
+  PubKey creator_public_key = 3;
+
+  Address creator_address = 4;
+}
+
+message WrappedBlock {
+  Block content = 1;
+
+  Signature signature = 2;
+
+  PubKey creator_public_key = 3;
+
+  Address creator_address = 4;
+}
+
+message WrappedEndorsement {
+  Endorsement content = 1;
+
+  Signature signature = 2;
+
+  PubKey creator_public_key = 3;
+
+  Address creator_address = 4;
+}
+
+message IpAddr {
+  string value = 1;
+}
+
+message NodeId {
+  string value = 1;
+}
+
+message Address {
+  string value = 1;
+}
+
+message KeyPair {
+  string value = 1;
+}
+
+//Get_operationsParameters holds parameters to Get_operations
+message GetOperationsRequest {
+  OperationId operation_id = 1;
+}
+
+//Get_endorsementsParameters holds parameters to Get_endorsements
+message GetEndorsementsRequest {
+  repeated string endorsement_id = 1;
+}
+
+//Get_graph_intervalParameters holds parameters to Get_graph_interval
+message GetGraphIntervalRequest {
+  float end = 1;
+
+  float start = 2;
+}
+
+//Get_datastore_entryParameters holds parameters to Get_datastore_entry
+message GetDatastoreEntryRequest {
+  string key = 1;
+
+  string address = 2;
+}
+
+//Get_blockParameters holds parameters to Get_block
+message GetBlockRequest {
+  repeated string block_id = 1;
+}
+
+//Node_sign_messageParameters holds parameters to Node_sign_message
+message NodeSignMessageRequest {
+  string node_key = 1;
+}
+
+//Node_ban_by_ipParameters holds parameters to Node_ban_by_ip
+message NodeBanByIpRequest {
+  IpAddr ip_addr = 1;
+}
+
+//Node_ban_by_idParameters holds parameters to Node_ban_by_id
+message NodeBanByIdRequest {
+  NodeId node_id = 1;
+}
+
+//Node_remove_from_whitelistParameters holds parameters to Node_remove_from_whitelist
+message NodeRemoveFromWhitelistRequest {
+  IpAddr ip_addr = 1;
+}
+
+//Node_unban_by_idParameters holds parameters to Node_unban_by_id
+message NodeUnbanByIdRequest {
+  NodeId node_id = 1;
+}
+
+//Node_unban_by_ipParameters holds parameters to Node_unban_by_ip
+message NodeUnbanByIpRequest {
+  IpAddr ip_addr = 1;
+}
+
+//Node_whitelistParameters holds parameters to Node_whitelist
+message NodeWhitelistRequest {
+  IpAddr ip_addr = 1;
+}
+
+//Get_addressesParameters holds parameters to Get_addresses
+message GetAddressesRequest {
+  repeated string address = 1;
+
+  Address address = 2;
+}
+
+//Send_operationsParameters holds parameters to Send_operations
+message SendOperationsRequest {
+  OperationInput operation_input = 1;
+}
+
+//Get_filtered_sc_output_eventParameters holds parameters to Get_filtered_sc_output_event
+message GetFilteredScOutputEventRequest {
+  EventFilter event_filter = 1;
+}
+
+//Execute_read_only_callParameters holds parameters to Execute_read_only_call
+message ExecuteReadOnlyCallRequest {
+  ReadOnlyCall read_only_call = 1;
+}
+
+//Execute_read_only_bytecodeParameters holds parameters to Execute_read_only_bytecode
+message ExecuteReadOnlyBytecodeRequest {
+  ReadOnlyCall read_only_call = 1;
+}
+
+//Get_datastore_entriesParameters holds parameters to Get_datastore_entries
+message GetDatastoreEntriesRequest {
+  DatastoreEntryInput datastore_entry_input = 1;
+}
+
+//Node_remove_staking_addressesParameters holds parameters to Node_remove_staking_addresses
+message NodeRemoveStakingAddressesRequest {
+  repeated string private_key = 1;
+}
+
+//Node_add_staking_private_keysParameters holds parameters to Node_add_staking_private_keys
+message NodeAddStakingPrivateKeysRequest {
+  KeyPair key_pair = 1;
+}
+
+service Openapi {
+  rpc GetStatus ( google.protobuf.Empty ) returns ( NodeStatus ) {
+    option (google.api.http) = { post:"/get_status"  };
+  }
+
+  rpc GetCliques ( google.protobuf.Empty ) returns ( Clique ) {
+    option (google.api.http) = { post:"/get_cliques"  };
+  }
+
+  rpc GetOperations ( GetOperationsRequest ) returns ( OperationInfo ) {
+    option (google.api.http) = { post:"/get_operations" body:"operation_id"  };
+  }
+
+  rpc GetEndorsements ( GetEndorsementsRequest ) returns ( EndorsementInfo ) {
+    option (google.api.http) = { post:"/get_endorsements"  };
+  }
+
+  rpc GetGraphInterval ( GetGraphIntervalRequest ) returns ( DataStoreEntry ) {
+    option (google.api.http) = { post:"/get_graph_interval"  };
+  }
+
+  rpc GetDatastoreEntry ( GetDatastoreEntryRequest ) returns ( DataStoreEntry ) {
+    option (google.api.http) = { post:"/get_datastore_entry"  };
+  }
+
+  rpc GetBlock ( GetBlockRequest ) returns ( BlockInfo ) {
+    option (google.api.http) = { post:"/get_block"  };
+  }
+
+  rpc NodeStop ( google.protobuf.Empty ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/node_stop"  };
+  }
+
+  rpc NodeSignMessage ( NodeSignMessageRequest ) returns ( PubkeySig ) {
+    option (google.api.http) = { post:"/node_sign_message"  };
+  }
+
+  rpc NodeBanByIp ( NodeBanByIpRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/node_ban_by_ip" body:"ip_addr"  };
+  }
+
+  rpc NodeBanById ( NodeBanByIdRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/node_ban_by_id" body:"node_id"  };
+  }
+
+  rpc NodeRemoveFromWhitelist ( NodeRemoveFromWhitelistRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/node_remove_from_whitelist" body:"ip_addr"  };
+  }
+
+  rpc NodeUnbanById ( NodeUnbanByIdRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/node_unban_by_id" body:"node_id"  };
+  }
+
+  rpc NodeUnbanByIp ( NodeUnbanByIpRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/node_unban_by_ip" body:"ip_addr"  };
+  }
+
+  rpc NodeWhitelist ( NodeWhitelistRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/node_whitelist" body:"ip_addr"  };
+  }
+
+  rpc GetAddresses ( GetAddressesRequest ) returns ( AddressInfo ) {
+    option (google.api.http) = { post:"/get_addresses" body:"address"  };
+  }
+
+  rpc SendOperations ( SendOperationsRequest ) returns ( OperationId ) {
+    option (google.api.http) = { post:"/send_operations" body:"operation_input"  };
+  }
+
+  rpc GetFilteredScOutputEvent ( GetFilteredScOutputEventRequest ) returns ( SCOutputEvent ) {
+    option (google.api.http) = { post:"/get_filtered_sc_output_event" body:"event_filter"  };
+  }
+
+  rpc ExecuteReadOnlyCall ( ExecuteReadOnlyCallRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/execute_read_only_call" body:"read_only_call"  };
+  }
+
+  rpc ExecuteReadOnlyBytecode ( ExecuteReadOnlyBytecodeRequest ) returns ( ExecuteReadOnlyResponse ) {
+    option (google.api.http) = { post:"/execute_read_only_bytecode" body:"read_only_call"  };
+  }
+
+  rpc GetDatastoreEntries ( GetDatastoreEntriesRequest ) returns ( DataStoreEntryOutput ) {
+    option (google.api.http) = { post:"/get_datastore_entries" body:"datastore_entry_input"  };
+  }
+
+  rpc NodeRemoveStakingAddresses ( NodeRemoveStakingAddressesRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/remove_staking_addresses"  };
+  }
+
+  rpc NodeGetStakingAddresses ( google.protobuf.Empty ) returns ( Address ) {
+    option (google.api.http) = { post:"/get_staking_addresses"  };
+  }
+
+  rpc NodeAddStakingPrivateKeys ( NodeAddStakingPrivateKeysRequest ) returns ( google.protobuf.Empty ) {
+    option (google.api.http) = { post:"/add_staking_secret_keys" body:"key_pair"  };
+  }
+
+  rpc GetStakers ( google.protobuf.Empty ) returns ( Stackers ) {
+    option (google.api.http) = { post:"/get_stakers"  };
+  }
+}
+

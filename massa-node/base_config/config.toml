@@ -38,6 +38,10 @@
     # whether to enable WS.
     enable_ws = false
 
+[grpc]
+    # whether to enable gRPC.
+    enable = false
+
 [execution]
     # max number of generated events kept in RAM
     max_final_events = 10000

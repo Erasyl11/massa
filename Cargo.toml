@@ -36,6 +36,7 @@ members = [
   "massa-final-state",
   "massa-pos-exports",
   "massa-pos-worker",
+  "massa-grpc",
 ]
 resolver = "2"
 
