@@ -110,8 +110,9 @@ impl NetworkWorker {
 
         let (conn_tx, connections_rx) =
             bounded::<(ConnectionId, HandshakeReturnType)>(cfg.handshake_manager_channel_size);
-        let (handshake_tx, handshake_join_handle) =
-            start_handshake_manager(conn_tx, runtime.handle().clone());
+        let (handshake_tx, handshake_rx) = bounded::<(ConnectionId, HandshakeWorker)>(cfg.handshake_manager_channel_size);
+        let handshake_join_handle =
+            start_handshake_manager(handshake_rx, conn_tx, runtime.handle().clone());
 
         let (node_result_tx, node_result_rx) = bounded::<(
             NodeId,

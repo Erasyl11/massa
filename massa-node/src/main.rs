@@ -44,7 +44,7 @@ use massa_models::config::constants::{
     NODE_RESULT_CHANNEL_SIZE, OPERATION_VALIDITY_PERIODS, PERIODS_PER_CYCLE,
     POOL_CONTROLLER_CHANNEL_SIZE, POS_MISS_RATE_DEACTIVATION_THRESHOLD, POS_SAVED_CYCLES,
     PROTOCOL_CONTROLLER_CHANNEL_SIZE, PROTOCOL_EVENT_CHANNEL_SIZE, ROLL_PRICE, T0, THREAD_COUNT,
-    VERSION,
+    VERSION, NODE_MESSAGE_CHANNEL_SIZE,
 };
 use massa_models::config::CONSENSUS_BOOTSTRAP_PART_SIZE;
 use massa_network_exports::{Establisher, NetworkConfig, NetworkManager};
@@ -282,6 +282,7 @@ async fn launch(
         handshake_manager_channel_size: HANDSHAKE_MANAGER_CHANNEL_SIZE,
         node_result_channel_size: NODE_RESULT_CHANNEL_SIZE,
         handshake_peer_list_channel_size: HANDSHAKE_PEER_LIST_CHANNEL_SIZE,
+        node_message_channel_size: NODE_MESSAGE_CHANNEL_SIZE,
     };
 
     // launch network controller

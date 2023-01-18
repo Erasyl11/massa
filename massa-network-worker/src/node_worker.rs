@@ -177,7 +177,7 @@ impl NodeWorker {
             )
         })?;
 
-        let (message_tx, message_rx) = bounded::<Message>(self.cfg.node_command_channel_size); // TODO: config
+        let (message_tx, message_rx) = bounded::<Message>(self.cfg.node_message_channel_size);
         let node_reader_handle = self
             .runtime_handle
             .spawn(async move { node_reader_handle(&mut socket_reader, message_tx).await });

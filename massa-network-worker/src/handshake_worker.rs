@@ -8,7 +8,7 @@ use super::{
     binders::{ReadBinder, WriteBinder},
     messages::Message,
 };
-use crossbeam_channel::{bounded, Sender};
+use crossbeam_channel::{Receiver, Sender};
 use futures::future::try_join;
 use massa_hash::Hash;
 use massa_models::{
@@ -41,12 +41,11 @@ pub type HandshakeReturnType = Result<(NodeId, ReadBinder, WriteBinder), Network
 /// Start a thread, that will be responsible for running handshake workers,
 /// and sending the results back to the network worker.
 pub fn start_handshake_manager(
+    worker_rx: Receiver<(ConnectionId, HandshakeWorker)>,
     connection_sender: Sender<(ConnectionId, HandshakeReturnType)>,
     runtime_handle: Handle,
-) -> (Sender<(ConnectionId, HandshakeWorker)>, JoinHandle<()>) {
-    // TODO: config size.
-    let (worker_tx, worker_rx) = bounded::<(ConnectionId, HandshakeWorker)>(1);
-    let join_handle = thread::spawn(move || {
+) -> JoinHandle<()> {
+    thread::spawn(move || {
         while let Ok((connection_id, new_handshake_worker)) = worker_rx.recv() {
             let connection_sender = connection_sender.clone();
             runtime_handle.block_on(async move {
@@ -56,8 +55,7 @@ pub fn start_handshake_manager(
                     .expect("Failed to send new connection message to network worker.");
             });
         }
-    });
-    (worker_tx, join_handle)
+    })
 }
 
 /// Manages handshakes.

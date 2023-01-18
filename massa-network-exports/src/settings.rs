@@ -98,6 +98,8 @@ pub struct NetworkConfig {
     pub node_result_channel_size: usize,
     /// Handshake peer list chanel size
     pub handshake_peer_list_channel_size: usize,
+    /// Node message channel size
+    pub node_message_channel_size: usize,
 }
 
 /// Connection configuration for a peer type
@@ -126,7 +128,7 @@ pub mod tests {
         MAX_OPERATION_DATASTORE_KEY_LENGTH, MAX_OPERATION_DATASTORE_VALUE_LENGTH,
         MAX_PARAMETERS_SIZE, NETWORK_CONTROLLER_CHANNEL_SIZE, NETWORK_EVENT_CHANNEL_SIZE,
         NETWORK_NODE_COMMAND_CHANNEL_SIZE, NETWORK_NODE_EVENT_CHANNEL_SIZE,
-        NODE_RESULT_CHANNEL_SIZE, THREAD_COUNT,
+        NODE_RESULT_CHANNEL_SIZE, THREAD_COUNT, NODE_MESSAGE_CHANNEL_SIZE
     };
     use massa_time::MassaTime;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -196,6 +198,7 @@ pub mod tests {
                 handshake_manager_channel_size: HANDSHAKE_MANAGER_CHANNEL_SIZE,
                 node_result_channel_size: NODE_RESULT_CHANNEL_SIZE,
                 handshake_peer_list_channel_size: HANDSHAKE_PEER_LIST_CHANNEL_SIZE,
+                node_message_channel_size: NODE_MESSAGE_CHANNEL_SIZE,
             }
         }
     }
@@ -266,6 +269,7 @@ pub mod tests {
                 handshake_manager_channel_size: HANDSHAKE_MANAGER_CHANNEL_SIZE,
                 node_result_channel_size: NODE_RESULT_CHANNEL_SIZE,
                 handshake_peer_list_channel_size: HANDSHAKE_PEER_LIST_CHANNEL_SIZE,
+                node_message_channel_size: NODE_MESSAGE_CHANNEL_SIZE,
             }
         }
     }
