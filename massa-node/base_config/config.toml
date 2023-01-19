@@ -40,7 +40,11 @@
 
 [grpc]
     # whether to enable gRPC.
-    enable = false
+    enabled = true
+    # whether to enable Http transcoding.
+    enable_http = false
+    # bind for the Massa gRPC API
+    bind = "0.0.0.0:33037"
 
 [execution]
     # max number of generated events kept in RAM

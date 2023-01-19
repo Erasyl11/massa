@@ -3,8 +3,8 @@
 use serde::Deserialize;
 use std::net::SocketAddr;
 
-/// gRPC settings.
-/// the gRPC settings
+/// gRPC configuration.
+/// the gRPC configuration
 #[derive(Debug, Deserialize, Clone)]
 pub struct GrpcConfig {
     /// whether to enable gRPC.
@@ -12,5 +12,5 @@ pub struct GrpcConfig {
     /// whether to enable HTTP.
     pub enable_http: bool,
     /// bind for the Massa gRPC API
-    pub bind_grpc_api: SocketAddr,
+    pub bind: SocketAddr,
 }

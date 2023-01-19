@@ -21,6 +21,8 @@ use massa_execution_worker::start_execution_worker;
 use massa_factory_exports::{FactoryChannels, FactoryConfig, FactoryManager};
 use massa_factory_worker::start_factory;
 use massa_final_state::{FinalState, FinalStateConfig};
+use massa_grpc::api::MassaService;
+use massa_grpc::config::GrpcConfig;
 use massa_ledger_exports::LedgerConfig;
 use massa_ledger_worker::FinalLedger;
 use massa_logging::massa_trace;
@@ -540,8 +542,8 @@ async fn launch(
 
     // spawn Massa API
     let api = API::<ApiV2>::new(
-        consensus_channels,
-        pool_channels,
+        consensus_channels.clone(),
+        pool_channels.clone(),
         api_config.clone(),
         *VERSION,
     );
@@ -584,6 +586,25 @@ async fn launch(
         .serve(&SETTINGS.api.bind_public, &api_config)
         .await
         .expect("failed to start PUBLIC API");
+
+    // spawn gRPC API
+    let grpc_config = GrpcConfig {
+        enabled: SETTINGS.grpc.enabled,
+        enable_http: SETTINGS.grpc.enable_http,
+        bind: SETTINGS.grpc.bind,
+    };
+
+    let grpc_api = MassaService {
+        consensus_channels,
+        pool_channels,
+        grpc_config: grpc_config.clone(),
+        version: *VERSION,
+    };
+
+    grpc_api
+        .serve(&grpc_config)
+        .await
+        .expect("failed to start GRPC API");
 
     #[cfg(feature = "deadlock_detection")]
     {

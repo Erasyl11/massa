@@ -151,6 +151,7 @@ pub struct Settings {
     pub ledger: LedgerSettings,
     pub selector: SelectionSettings,
     pub factory: FactorySettings,
+    pub grpc: GrpcSettings,
 }
 
 /// Consensus configuration
@@ -224,6 +225,18 @@ pub struct ProtocolSettings {
     pub max_operations_propagation_time: MassaTime,
     /// Time threshold after which operation are not propagated
     pub max_endorsements_propagation_time: MassaTime,
+}
+
+/// gRPC settings.
+/// the gRPC settings
+#[derive(Debug, Deserialize, Clone)]
+pub struct GrpcSettings {
+    /// whether to enable gRPC.
+    pub enabled: bool,
+    /// whether to enable HTTP.
+    pub enable_http: bool,
+    /// bind for the Massa gRPC API
+    pub bind: SocketAddr,
 }
 
 #[cfg(test)]

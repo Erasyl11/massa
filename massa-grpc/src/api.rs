@@ -19,36 +19,19 @@ pub struct MassaService {
     pub consensus_channels: ConsensusChannels,
     /// link(channels) to the pool component
     pub pool_channels: PoolChannels,
-    /// gRPC settings
-    pub grpc_settings: GrpcConfig,
+    /// gRPC configuration
+    pub grpc_config: GrpcConfig,
     /// node version
     pub version: massa_models::version::Version,
 }
 
 impl MassaService {
-    /// generate a new massa API
-    pub fn new(
-        consensus_channels: ConsensusChannels,
-        pool_channels: PoolChannels,
-        grpc_settings: GrpcConfig,
-        version: massa_models::version::Version,
-    ) -> Self {
-        MassaService {
-            consensus_channels,
-            pool_channels,
-            grpc_settings,
-            version,
-        }
-    }
-
-    async fn serve(
-        service: MassaService,
-        grpc_config: &GrpcConfig,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let svc = MassaServer::new(service);
+    /// Start the gRPC API
+    pub async fn serve(self, grpc_config: &GrpcConfig) -> Result<(), Box<dyn std::error::Error>> {
+        let svc = MassaServer::new(self);
         tonic::transport::Server::builder()
             .add_service(svc)
-            .serve(grpc_config.bind_grpc_api)
+            .serve(grpc_config.bind)
             .await?;
 
         Ok(())

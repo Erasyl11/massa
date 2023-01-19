@@ -2305,6 +2305,7 @@ dependencies = [
  "massa_factory_exports",
  "massa_factory_worker",
  "massa_final_state",
+ "massa_grpc",
  "massa_ledger_exports",
  "massa_ledger_worker",
  "massa_logging",
