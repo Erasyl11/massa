@@ -4,247 +4,309 @@ package grpc.massa.protobuf;
 
 import "google/protobuf/empty.proto";
 
+// Massa gRPC service
 service Massa {
-
+  // GetVersion
   rpc GetVersion ( google.protobuf.Empty ) returns ( Version ) {}
-
+  // SendBlocks
   rpc SendBlocks ( stream SendBlocksRequest ) returns ( stream BlockId ) {}
-
+  // SendEndorsements
   rpc SendEndorsements ( stream SendEndorsementsRequest ) returns ( stream EndorsementId ) {}
-
+  // SendOperations
   rpc SendOperations ( stream SendOperationsRequest ) returns ( stream OperationId ) {}
 
 }
 
-//SendEndorsementsRequest holds parameters to SendEndorsements
+// SendEndorsementsRequest holds parameters to SendEndorsements
 message SendEndorsementsRequest {
+  // object field
   Endorsement endorsements = 1;
 }
 
-//SendBlocksRequest holds parameters to SendBlocks
+// SendBlocksRequest holds parameters to SendBlocks
 message SendBlocksRequest {
+  // object field
   Block block = 1;
 }
 
-//SendOperationsRequest holds parameters to SendOperations
+// SendOperationsRequest holds parameters to SendOperations
 message SendOperationsRequest {
+  // object field
   OperationInput operation = 1;
 }
 
 // region Block
+    // message struct
     message Block {
+      // object field
       BlockHeader header = 1;
-    
+      // object field
       repeated OperationInfo operations = 2;
     }
-    
+
+    // message struct
     message BlockId {
+      // string field
      string value = 1;
     }
-    
-    message BlockInfo {
-      string id = 1;
 
+    // message struct
+    message BlockInfo {
+      // string field
+      string id = 1;
+      // object field field
       BlockInfoContent content = 2;
     }
-    
+
+    // message struct
     message BlockInfoContent {
+      // bool field
       bool is_final = 1;
-    
+      // bool field
       bool is_stale = 2;
-    
+      // bool field
       bool is_in_blockclique = 3;
-    
+      // object field
       Block block = 4;
     }
-    
-    message BlockHeader {
-      string creator = 1;
-    
-      string operation_merkle_root = 2;
-    
-      repeated string parents = 3;
 
+    // message struct
+    message BlockHeader {
+      // string field
+      string creator = 1;
+      // string field
+      string operation_merkle_root = 2;
+      // string field
+      repeated string parents = 3;
+      // object field
       Slot slot = 4;
     }
 
+    // message struct
     message WrappedBlockHeader {
+      // object field
       BlockHeader content = 1;
-
+      // object field
       Signature signature = 2;
-
+      // object field
       PubKey creator_public_key = 3;
-
+      // object field
       Address creator_address = 4;
     }
-    
+
+    // message struct
     message WrappedBlock {
+      // object field
       Block content = 1;
-
+      // object field
       Signature signature = 2;
-
+      // object field
       PubKey creator_public_key = 3;
-
+      // object field
       Address creator_address = 4;
     }
 
+    // message struct
     message Address {
+      // string field
       string value = 1;
     }
 
-// region Endorsement
+
+// message struct    // region Endorsement
     message EndorsementInfo {
+      // string field
       string id = 1;
-    
+      // bool field
       bool in_pool = 2;
-    
+      // string field
       repeated string in_blocks = 3;
-    
+      // bool field
       bool is_final = 4;
-    
+      // object field
       Endorsement endorsement = 5;
     }
-    
+
+    // message struct
     message Endorsement {
+      // object field
       EndorsementContent content = 1;
-    
+      // string field
       string signature = 2;
     }
-    
+
+    // message struct
     message EndorsementContent {
+      // string field
       string sender_public_key = 1;
-    
+      // object field
       Slot slot = 2;
-    
+      // float field
       float index = 3;
-    
+      // string field
       string endorsed_block = 4;
     }
-    
+
+    // message struct
     message EndorsementId {
+      // string field
       string value = 1;
     }
 
-// region Operation
-    message OperationInfo {
-      string id = 1;
 
+// message struct    // region Operation
+    message OperationInfo {
+      // string field
+      string id = 1;
+      // string field
       repeated string in_blocks = 2;
-    
+      // bool field
       bool in_pool = 3;
-    
+      // bool field
       bool is_final = 4;
-    
+      // object field
       WrappedOperation operation = 5;
     }
-    
+
+    // message struct
     message Roll {
+      // int64 field
       int64 roll_count = 1;
     }
-    
+
+    // message struct
     message Slot {
+      // float field
       float period = 1;
-   
+      // float field
       float thread = 2;
     }
-    
+
+    // message struct
     message OperationId {
+      // string field
       string value = 1;
     }
-    
+
+    // message struct
     message OperationType {
+      // object field
       Transaction transaction = 1;
-    
+      // object field
       ExecuteSC execut_sc = 2;
-    
+      // object field
       CallSC call_sc = 3;
-    
+      // object field
       RollBuy roll_buy = 4;
-    
+      // object field
       RollSell roll_sell = 5;
     }
-    
+
+    // message struct
     message Transaction {
+      // string field
       string amount = 1;
-    
+      // string field
       string recipient_address = 2;
     }
-    
+
+    // message struct
     message CallSC {
+      // string field
       string target_addr = 1;
-      
+      // string field
       string target_func = 2;
-      
+      // string field
       string param = 3;
-      
+      // float field
       float max_gas = 4;
-      
+      // float field
       float sequential_coins = 5;
-      
+      // float field
       float parallel_coins = 6;
-      
+      // float field
       float gas_price = 7;
     }
-    
+
+    // message struct
     message ExecuteSC {
+      // float field
       repeated float data = 1;
-    
+      // float field
       float max_gas = 2;
-    
+      // string field
       string coins = 3;
-    
+      // string field
       string gas_price = 4;
     }
-    
+
+    // message struct
     message RollBuy {
+      // float field
       float roll_count = 1;
     }
-    
+
+    // message struct
     message RollSell {
+      // float field
       float roll_count = 1;
     }
-    
+
+    // message struct
     message Signature {
+      // string field
       string value = 1;
     }
-    
+
+    // message struct
     message PubKey {
+      // string field
       string value = 1;
     }
-    
+
+    // message struct
     message OperationInput {
+      // string field
       string creator_public_key = 1;
-
+      // object field
       Signature signature = 2;
-
+      // string field
       repeated string serialized_content = 3;
     }
-    
+
+    // message struct
     message WrappedOperation {
+      // object field
       OperationType content = 1;
-
+      // object field
       Signature signature = 2;
-
+      // object field
       PubKey creator_public_key = 3;
-
+      // object field
       Address creator_address = 4;
     }
-    
+
+    // message struct
     message WrappedEndorsement {
+      // object field
       Endorsement content = 1;
-    
+      // object field
       Signature signature = 2;
-    
+      // object field
       PubKey creator_public_key = 3;
-    
+      // object field
       Address creator_address = 4;
     }
 
-// common
+
+// message struct    // common
     message MassaTime {
+      // int64 field
       int64 value = 1;
     }
-    
+
+    // message struct
     message Version {
+      // string field
       string version = 1;
     }

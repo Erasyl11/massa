@@ -91,6 +91,7 @@ async fn launch(
     StopHandle,
     StopHandle,
     StopHandle,
+    Option<massa_grpc::api::StopHandle>,
 ) {
     info!("Node version : {}", *VERSION);
     if let Some(end) = *END_TIMESTAMP {
@@ -556,6 +557,33 @@ async fn launch(
     let mut api_config = api_config.clone();
     api_config.enable_ws = false;
 
+    // Wheter to spawn gRPC API
+    let grpc_handle = if SETTINGS.grpc.enabled {
+        let grpc_config = GrpcConfig {
+            enabled: SETTINGS.grpc.enabled,
+            enable_http: SETTINGS.grpc.enable_http,
+            bind: SETTINGS.grpc.bind,
+        };
+
+        let grpc_api = MassaService {
+            consensus_channels,
+            pool_channels,
+            grpc_config: grpc_config.clone(),
+            version: *VERSION,
+        };
+
+        let (stop_handle, server_future) = grpc_api
+            .serve(&grpc_config)
+            .await
+            .expect("failed to configure GRPC API");
+
+        tokio::spawn(server_future);
+
+        Some(stop_handle)
+    } else {
+        None
+    };
+
     // spawn private API
     let (api_private, api_private_stop_rx) = API::<Private>::new(
         network_command_sender.clone(),
@@ -586,25 +614,6 @@ async fn launch(
         .serve(&SETTINGS.api.bind_public, &api_config)
         .await
         .expect("failed to start PUBLIC API");
-
-    // spawn gRPC API
-    let grpc_config = GrpcConfig {
-        enabled: SETTINGS.grpc.enabled,
-        enable_http: SETTINGS.grpc.enable_http,
-        bind: SETTINGS.grpc.bind,
-    };
-
-    let grpc_api = MassaService {
-        consensus_channels,
-        pool_channels,
-        grpc_config: grpc_config.clone(),
-        version: *VERSION,
-    };
-
-    grpc_api
-        .serve(&grpc_config)
-        .await
-        .expect("failed to start GRPC API");
 
     #[cfg(feature = "deadlock_detection")]
     {
@@ -649,6 +658,7 @@ async fn launch(
         api_private_handle,
         api_public_handle,
         api_handle,
+        grpc_handle,
     )
 }
 
@@ -678,6 +688,7 @@ async fn stop(
     api_private_handle: StopHandle,
     api_public_handle: StopHandle,
     api_handle: StopHandle,
+    grpc_handle: Option<massa_grpc::api::StopHandle>,
 ) {
     // stop bootstrap
     if let Some(bootstrap_manager) = bootstrap_manager {
@@ -695,6 +706,11 @@ async fn stop(
 
     // stop Massa API
     api_handle.stop();
+
+    // stop Massa gRPC API
+    if let Some(handle) = grpc_handle {
+        handle.stop();
+    }
 
     // stop factory
     factory_manager.stop();
@@ -824,6 +840,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
             api_private_handle,
             api_public_handle,
             api_handle,
+            grpc_handle,
         ) = launch(node_wallet.clone()).await;
 
         // interrupt signal listener
@@ -892,6 +909,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
             api_private_handle,
             api_public_handle,
             api_handle,
+            grpc_handle,
         )
         .await;
 
